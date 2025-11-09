@@ -76,43 +76,19 @@ export const signupsApi = {
 }
 
 // Partner Events API
-// Your table is named "partner events" (with a space)
-// Supabase JS client has issues with table names containing spaces
-// RECOMMENDED: Rename your table in Supabase SQL Editor:
+// IMPORTANT: Your table is named "partner events" (with a space)
+// The Supabase JS client cannot handle table names with spaces
+// You MUST rename the table in Supabase for this to work:
+//
+// Run this in Supabase SQL Editor:
 //   ALTER TABLE "partner events" RENAME TO partner_events;
-// 
-// For now, trying to use the table name with space (may not work with Supabase client)
+//
+// After renaming, the code below will work correctly
 export const partnerEventsApi = {
-  fetch: () => {
-    // Try with underscore first (recommended after renaming)
-    try {
-      return fetchTable('partner_events')
-    } catch {
-      // Fallback: try with space (may not work)
-      return fetchTable('partner events')
-    }
-  },
-  create: (event: any) => {
-    try {
-      return createRecord('partner_events', event)
-    } catch {
-      return createRecord('partner events', event)
-    }
-  },
-  update: (id: number, updates: any) => {
-    try {
-      return updateRecord('partner_events', id, updates)
-    } catch {
-      return updateRecord('partner events', id, updates)
-    }
-  },
-  delete: (id: number) => {
-    try {
-      return deleteRecord('partner_events', id)
-    } catch {
-      return deleteRecord('partner events', id)
-    }
-  },
+  fetch: () => fetchTable('partner_events'),
+  create: (event: any) => createRecord('partner_events', event),
+  update: (id: number, updates: any) => updateRecord('partner_events', id, updates),
+  delete: (id: number) => deleteRecord('partner_events', id),
 }
 
 // Get counts for dashboard statistics
@@ -143,12 +119,6 @@ export const dashboardStats = {
   getHackathonsCount: () => getTableCount('hackathons'),
   getScholarshipsCount: () => getTableCount('scholarships'),
   getSignupsCount: () => getTableCount('signups'),
-  getPartnerEventsCount: async () => {
-    try {
-      return await getTableCount('partner_events')
-    } catch {
-      return await getTableCount('partner events')
-    }
-  },
+  getPartnerEventsCount: () => getTableCount('partner_events'),
 }
 

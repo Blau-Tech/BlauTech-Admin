@@ -72,10 +72,15 @@ USING (
 -- ============================================
 -- PARTNER EVENTS TABLE POLICIES
 -- ============================================
--- Note: If your table is named "partner events" (with space), use: ON public."partner events"
+-- First, check if your table exists and what it's named:
+-- SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename LIKE '%partner%';
 
+-- If your table is still named "partner events" (with space), rename it first:
+-- ALTER TABLE "partner events" RENAME TO partner_events;
+
+-- Then create the policy on the renamed table:
 CREATE POLICY "Admins can manage partner events"
-ON public."partner events"
+ON public.partner_events
 FOR ALL
 TO authenticated
 USING (
