@@ -23,7 +23,7 @@ export default function ScholarshipsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [searchQuery, setSearchQuery] = useState('')
   const [scholarshipLink, setScholarshipLink] = useState('')
-  const [webhookUrl] = useState('http://localhost:5678/webhook-test/8e521ce6-0920-44b4-9375-b6ba6f2f38aa')
+  const [webhookUrl] = useState(process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || '')
   const [webhookLoading, setWebhookLoading] = useState(false)
 
   useEffect(() => {
