@@ -22,6 +22,12 @@ export default function EventsPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // Boolean filters - when true, show only events where that attribute is NOT set
+  const [filterNotHighlighted, setFilterNotHighlighted] = useState(false)
+  const [filterNotLinkedIn, setFilterNotLinkedIn] = useState(false)
+  const [filterNotWhatsApp, setFilterNotWhatsApp] = useState(false)
+  const [filterNotNewsletter, setFilterNotNewsletter] = useState(false)
 
   useEffect(() => {
     loadEvents()
@@ -163,7 +169,7 @@ export default function EventsPage() {
     return (a?.name || '').toString().localeCompare((b?.name || '').toString())
   }
 
-  // Filter events based on search
+  // Filter events based on search and boolean filters
   const filteredEvents = useMemo(() => {
     let filtered = [...events]
 
@@ -184,8 +190,22 @@ export default function EventsPage() {
       })
     }
 
+    // Boolean filters - show only events where the attribute is NOT set
+    if (filterNotHighlighted) {
+      filtered = filtered.filter((event) => !event.is_highlight)
+    }
+    if (filterNotLinkedIn) {
+      filtered = filtered.filter((event) => !event.posted_linkedin)
+    }
+    if (filterNotWhatsApp) {
+      filtered = filtered.filter((event) => !event.posted_whatsapp)
+    }
+    if (filterNotNewsletter) {
+      filtered = filtered.filter((event) => !event.posted_newsletter)
+    }
+
     return filtered
-  }, [events, searchQuery])
+  }, [events, searchQuery, filterNotHighlighted, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
 
   const sortedFilteredEvents = useMemo(() => {
     return [...filteredEvents].sort(compareEventsByDateTime)
@@ -383,7 +403,7 @@ export default function EventsPage() {
         </div>
 
         {/* Search */}
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,20 +430,106 @@ export default function EventsPage() {
           </div>
         </div>
 
+        {/* Filters */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Show only:</span>
+            <button
+              type="button"
+              onClick={() => setFilterNotHighlighted(!filterNotHighlighted)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                filterNotHighlighted
+                  ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-300'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              Not Highlighted
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterNotLinkedIn(!filterNotLinkedIn)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                filterNotLinkedIn
+                  ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-300'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+              </svg>
+              Not on LinkedIn
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterNotWhatsApp(!filterNotWhatsApp)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                filterNotWhatsApp
+                  ? 'bg-green-100 text-green-800 ring-2 ring-green-300'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+              </svg>
+              Not on WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterNotNewsletter(!filterNotNewsletter)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                filterNotNewsletter
+                  ? 'bg-purple-100 text-purple-800 ring-2 ring-purple-300'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Not in Newsletter
+            </button>
+            {(filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterNotHighlighted(false)
+                  setFilterNotLinkedIn(false)
+                  setFilterNotWhatsApp(false)
+                  setFilterNotNewsletter(false)
+                }}
+                className="inline-flex items-center gap-1 px-2 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Events Display - Conditional Rendering */}
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
             <p className="text-gray-500">
               {events.length === 0
                 ? 'No events available'
-                : 'No events match your search criteria'}
+                : 'No events match your search criteria or filters'}
             </p>
-            {searchQuery && (
+            {(searchQuery || filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter) && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('')
+                  setFilterNotHighlighted(false)
+                  setFilterNotLinkedIn(false)
+                  setFilterNotWhatsApp(false)
+                  setFilterNotNewsletter(false)
+                }}
                 className="mt-4 text-sm text-primary-600 hover:text-primary-800 font-medium"
               >
-                Clear search
+                Clear search and filters
               </button>
             )}
           </div>
