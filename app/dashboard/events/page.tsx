@@ -131,6 +131,38 @@ export default function EventsPage() {
     return format(date, 'EEEE')
   }
 
+  // Sort events by date/time for all view modes
+  const compareEventsByDateTime = (a: any, b: any) => {
+    const aHasDate = !!a?.start_date
+    const bHasDate = !!b?.start_date
+
+    // Put undated events last
+    if (aHasDate && !bHasDate) return -1
+    if (!aHasDate && bHasDate) return 1
+    if (!aHasDate && !bHasDate) {
+      return (a?.name || '').toString().localeCompare((b?.name || '').toString())
+    }
+
+    const aDate = startOfDay(new Date(a.start_date))
+    const bDate = startOfDay(new Date(b.start_date))
+    const dayDiff = aDate.getTime() - bDate.getTime()
+    if (dayDiff !== 0) return dayDiff
+
+    const aHasTime = !!a?.start_time
+    const bHasTime = !!b?.start_time
+
+    // For same date: show timed events before "all-day/unknown time" events
+    if (aHasTime && !bHasTime) return -1
+    if (!aHasTime && bHasTime) return 1
+    if (aHasTime && bHasTime) {
+      const timeDiff = a.start_time.localeCompare(b.start_time)
+      if (timeDiff !== 0) return timeDiff
+    }
+
+    // Stable-ish tie-breakers
+    return (a?.name || '').toString().localeCompare((b?.name || '').toString())
+  }
+
   // Filter events based on search
   const filteredEvents = useMemo(() => {
     let filtered = [...events]
@@ -155,10 +187,14 @@ export default function EventsPage() {
     return filtered
   }, [events, searchQuery])
 
+  const sortedFilteredEvents = useMemo(() => {
+    return [...filteredEvents].sort(compareEventsByDateTime)
+  }, [filteredEvents])
+
   // Group filtered events by date for chronological view
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, any[]> = {}
-    filteredEvents.forEach((event) => {
+    sortedFilteredEvents.forEach((event) => {
       if (event.start_date) {
         const date = startOfDay(new Date(event.start_date))
         const dateKey = date.toISOString()
@@ -170,22 +206,18 @@ export default function EventsPage() {
     })
     
     // Sort dates and events within each date
-    const sortedDates = Object.keys(grouped).sort()
+    const sortedDates = Object.keys(grouped).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    )
     const result: Array<{ date: Date; events: any[] }> = []
     sortedDates.forEach((dateKey) => {
       result.push({
         date: new Date(dateKey),
-        events: grouped[dateKey].sort((a, b) => {
-          // Compare by start_time if available, otherwise by date
-          if (a.start_time && b.start_time) {
-            return a.start_time.localeCompare(b.start_time)
-          }
-          return 0
-        }),
+        events: grouped[dateKey].sort(compareEventsByDateTime),
       })
     })
     return result
-  }, [filteredEvents])
+  }, [sortedFilteredEvents])
 
   // Table columns configuration
   const tableColumns = [
@@ -398,7 +430,7 @@ export default function EventsPage() {
         ) : viewMode === 'card' ? (
           /* Card View */
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            {filteredEvents.map((event) => (
+            {sortedFilteredEvents.map((event) => (
               <div
                 key={event.id}
                 onClick={() => handleViewDetails(event)}
@@ -561,7 +593,7 @@ export default function EventsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {filteredEvents.map((event) => (
+                      {sortedFilteredEvents.map((event) => (
                         <tr 
                           key={event.id} 
                           className={`transition-colors ${
