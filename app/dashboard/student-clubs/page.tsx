@@ -27,6 +27,42 @@ export default function StudentClubsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingClub, setEditingClub] = useState<StudentClub | null>(null)
 
+  // Link submission state
+  const [clubLink, setClubLink] = useState('')
+  const [webhookLoading, setWebhookLoading] = useState(false)
+
+  const handleWebhookSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clubLink.trim()) return
+
+    try {
+      setWebhookLoading(true)
+      setError('')
+
+      const url = 'https://troyrivera.app.n8n.cloud/webhook/22dc92e9-366b-41c1-9d88-35ea11552292'
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ link: clubLink.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Webhook request failed: ${response.statusText}`)
+      }
+
+      setSuccessMessage('Club link sent successfully!')
+      setClubLink('')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Failed to send webhook request')
+    } finally {
+      setWebhookLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadClubs()
   }, [])
@@ -203,6 +239,29 @@ export default function StudentClubsPage() {
                 </svg>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Webhook URL Input */}
+        <div className="mb-8 flex justify-center">
+          <div className="w-full max-w-2xl">
+            <form onSubmit={handleWebhookSubmit} className="flex items-center gap-3">
+              <input
+                type="url"
+                placeholder="Enter club link URL..."
+                value={clubLink}
+                onChange={(e) => setClubLink(e.target.value)}
+                className="flex-1 text-base px-4 py-3 border-2 border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm"
+                disabled={webhookLoading}
+              />
+              <button
+                type="submit"
+                disabled={!clubLink.trim() || webhookLoading}
+                className="px-6 py-3 text-base font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                {webhookLoading ? 'Sending...' : 'Send'}
+              </button>
+            </form>
           </div>
         </div>
 
