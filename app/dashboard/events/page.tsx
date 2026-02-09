@@ -7,7 +7,7 @@ import Modal from '@/components/Modal'
 import EventForm from '@/components/EventForm'
 import EventDetailView from '@/components/EventDetailView'
 import { eventsApi } from '@/lib/api'
-import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
+import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
@@ -22,6 +22,8 @@ export default function EventsPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortAscending, setSortAscending] = useState(true) // true = earliest first, false = latest first
+  const [hidePastEvents, setHidePastEvents] = useState(false)
   
   // Boolean filters - when true, show only events where that attribute is NOT set
   const [filterNotHighlighted, setFilterNotHighlighted] = useState(false)
@@ -190,6 +192,16 @@ export default function EventsPage() {
       })
     }
 
+    // Hide past events filter
+    if (hidePastEvents) {
+      filtered = filtered.filter((event) => {
+        if (!event.start_date) return true // Keep events without dates
+        const eventDate = new Date(event.start_date)
+        // Consider event as past if the date (without time) is before today
+        return !isPast(startOfDay(eventDate))
+      })
+    }
+
     // Boolean filters - show only events where the attribute is NOT set
     if (filterNotHighlighted) {
       filtered = filtered.filter((event) => !event.is_highlight)
@@ -205,11 +217,13 @@ export default function EventsPage() {
     }
 
     return filtered
-  }, [events, searchQuery, filterNotHighlighted, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
+  }, [events, searchQuery, hidePastEvents, filterNotHighlighted, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
 
   const sortedFilteredEvents = useMemo(() => {
-    return [...filteredEvents].sort(compareEventsByDateTime)
-  }, [filteredEvents])
+    const sorted = [...filteredEvents].sort(compareEventsByDateTime)
+    // Reverse if sorting descending (latest first)
+    return sortAscending ? sorted : sorted.reverse()
+  }, [filteredEvents, sortAscending])
 
   // Group filtered events by date for chronological view
   const eventsByDate = useMemo(() => {
@@ -227,7 +241,9 @@ export default function EventsPage() {
     
     // Sort dates and events within each date
     const sortedDates = Object.keys(grouped).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+      (a, b) => sortAscending 
+        ? new Date(a).getTime() - new Date(b).getTime()
+        : new Date(b).getTime() - new Date(a).getTime()
     )
     const result: Array<{ date: Date; events: any[] }> = []
     sortedDates.forEach((dateKey) => {
@@ -237,7 +253,7 @@ export default function EventsPage() {
       })
     })
     return result
-  }, [sortedFilteredEvents])
+  }, [sortedFilteredEvents, sortAscending])
 
   // Table columns configuration
   const tableColumns = [
@@ -432,6 +448,37 @@ export default function EventsPage() {
 
         {/* Filters */}
         <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className="text-sm font-medium text-gray-700">Sort:</span>
+            <button
+              type="button"
+              onClick={() => setSortAscending(!sortAscending)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                sortAscending
+                  ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-300'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+              {sortAscending ? 'Earliest First' : 'Latest First'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setHidePastEvents(!hidePastEvents)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                hidePastEvents
+                  ? 'bg-red-100 text-red-800 ring-2 ring-red-300'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Hide Past Events
+            </button>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Show only:</span>
             <button
@@ -490,7 +537,7 @@ export default function EventsPage() {
               </svg>
               Not in Newsletter
             </button>
-            {(filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter) && (
+            {(filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents) && (
               <button
                 type="button"
                 onClick={() => {
@@ -498,6 +545,7 @@ export default function EventsPage() {
                   setFilterNotLinkedIn(false)
                   setFilterNotWhatsApp(false)
                   setFilterNotNewsletter(false)
+                  setHidePastEvents(false)
                 }}
                 className="inline-flex items-center gap-1 px-2 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700"
               >
@@ -518,7 +566,7 @@ export default function EventsPage() {
                 ? 'No events available'
                 : 'No events match your search criteria or filters'}
             </p>
-            {(searchQuery || filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter) && (
+            {(searchQuery || filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents) && (
               <button
                 onClick={() => {
                   setSearchQuery('')
@@ -526,6 +574,7 @@ export default function EventsPage() {
                   setFilterNotLinkedIn(false)
                   setFilterNotWhatsApp(false)
                   setFilterNotNewsletter(false)
+                  setHidePastEvents(false)
                 }}
                 className="mt-4 text-sm text-primary-600 hover:text-primary-800 font-medium"
               >
