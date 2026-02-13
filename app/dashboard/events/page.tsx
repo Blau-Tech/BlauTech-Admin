@@ -7,6 +7,7 @@ import Modal from '@/components/Modal'
 import EventForm from '@/components/EventForm'
 import EventDetailView from '@/components/EventDetailView'
 import { eventsApi } from '@/lib/api'
+import { Input } from '@/components/ui/input'
 import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
@@ -30,6 +31,11 @@ export default function EventsPage() {
   const [filterNotLinkedIn, setFilterNotLinkedIn] = useState(false)
   const [filterNotWhatsApp, setFilterNotWhatsApp] = useState(false)
   const [filterNotNewsletter, setFilterNotNewsletter] = useState(false)
+
+  // Link form (POST source + link; source is sent internally)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkSubmitting, setLinkSubmitting] = useState(false)
+  const [linkMessage, setLinkMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   useEffect(() => {
     loadEvents()
@@ -109,6 +115,40 @@ export default function EventsPage() {
       console.error('Error saving event:', err)
       // Error will be displayed in the form component
       throw err // Re-throw so form can handle it
+    }
+  }
+
+  const handleSubmitLink = async (e: React.FormEvent) => {
+
+    const url = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
+
+    e.preventDefault()
+    setLinkMessage(null)
+    if (!linkUrl.trim()) {
+      setLinkMessage({ type: 'error', text: 'Please enter a link.' })
+      return
+    }
+    try {
+      setLinkSubmitting(true)
+      // TODO: Adjust the exact n8n url + path
+      const res = await fetch(url + '', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          source: 'admin',
+          link: linkUrl.trim() 
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || res.statusText || 'Request failed')
+      }
+      setLinkMessage({ type: 'success', text: 'Link submitted successfully.' })
+      setLinkUrl('')
+    } catch (err: any) {
+      setLinkMessage({ type: 'error', text: err.message || 'Failed to submit link.' })
+    } finally {
+      setLinkSubmitting(false)
     }
   }
 
@@ -416,6 +456,33 @@ export default function EventsPage() {
               Add Event
             </button>
           </div>
+        </div>
+
+        {/* Link form - POST source (internal) + link */}
+        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <form onSubmit={handleSubmitLink} className="flex flex-wrap items-center gap-3">
+            <Input
+              id="link-url"
+              type="url"
+              placeholder="Paste link (URL)..."
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              disabled={linkSubmitting}
+              className="flex-1 min-w-[200px]"
+            />
+            <button
+              type="submit"
+              disabled={linkSubmitting}
+              className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:ring-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            >
+              {linkSubmitting ? 'Submitting…' : 'Submit link'}
+            </button>
+          </form>
+          {linkMessage && (
+            <p className={`mt-2 text-sm ${linkMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+              {linkMessage.text}
+            </p>
+          )}
         </div>
 
         {/* Search */}
