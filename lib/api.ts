@@ -188,3 +188,51 @@ export const dashboardStats = {
   getSignupsCount: () => getTableCount('signups'),
 }
 
+// Link tracking analytics
+export const linkTrackingApi = {
+  async fetchClicksByPlatform() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated. Please log in again.')
+
+    const { data, error } = await supabase
+      .from('link_clicks_by_platform')
+      .select('*')
+    if (error) throw error
+    return data || []
+  },
+
+  async fetchClicksByItem() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated. Please log in again.')
+
+    const { data, error } = await supabase
+      .from('link_clicks_by_item')
+      .select('*')
+    if (error) throw error
+    return data || []
+  },
+
+  async fetchTotalClicks() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated. Please log in again.')
+
+    const { count, error } = await supabase
+      .from('link_clicks')
+      .select('*', { count: 'exact', head: true })
+    if (error) throw error
+    return count || 0
+  },
+
+  async fetchTrackedLinks() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated. Please log in again.')
+
+    const { data, error } = await supabase
+      .from('tracked_links')
+      .select('*, link_clicks(count)')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+}
+
