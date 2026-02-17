@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/Layout'
-import { linkTrackingApi } from '@/lib/api'
+import { linkTrackingApi, itemNameApi } from '@/lib/api'
 
 interface ClicksByPlatform {
   platform: string
@@ -37,6 +37,7 @@ export default function LinkTrackingPage() {
   const [totalClicks, setTotalClicks] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [itemNames, setItemNames] = useState<Record<string, string>>({})
   const [filterType, setFilterType] = useState<string>('all')
   const [filterPlatform, setFilterPlatform] = useState<string>('all')
 
@@ -48,14 +49,24 @@ export default function LinkTrackingPage() {
     try {
       setLoading(true)
       setError('')
-      const [platformData, itemData, total] = await Promise.all([
+      const [platformData, itemData, total, eventNames, hackathonNames, scholarshipNames] = await Promise.all([
         linkTrackingApi.fetchClicksByPlatform(),
         linkTrackingApi.fetchClicksByItem(),
         linkTrackingApi.fetchTotalClicks(),
+        itemNameApi.fetchEventNames(),
+        itemNameApi.fetchHackathonNames(),
+        itemNameApi.fetchScholarshipNames(),
       ])
       setClicksByPlatform(platformData)
       setClicksByItem(itemData)
       setTotalClicks(total)
+
+      // Build lookup map: "event-7" -> "AI Conference 2025", etc.
+      const nameMap: Record<string, string> = {}
+      eventNames.forEach((e: { id: string | number; name: string }) => { nameMap[`event-${e.id}`] = e.name })
+      hackathonNames.forEach((h: { id: string | number; name: string }) => { nameMap[`hackathon-${h.id}`] = h.name })
+      scholarshipNames.forEach((s: { id: string | number; name: string }) => { nameMap[`scholarship-${s.id}`] = s.name })
+      setItemNames(nameMap)
     } catch (err: any) {
       console.error('Error loading link tracking data:', err)
       setError(err.message || 'Failed to load link tracking data')
@@ -273,7 +284,7 @@ export default function LinkTrackingPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Type</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">ID</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Item</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Destination</th>
                       {allPlatforms.map((p) => (
                         <th key={p} className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
@@ -293,8 +304,19 @@ export default function LinkTrackingPage() {
                               {typeConfig.label}
                             </span>
                           </td>
-                          <td className="px-3 py-4 text-sm text-gray-600 font-mono">
-                            {item.item_id}
+                          <td className="px-3 py-4 text-sm">
+                            {(() => {
+                              const nameKey = `${item.item_type}-${item.item_id}`
+                              const name = itemNames[nameKey]
+                              return (
+                                <div>
+                                  <p className="font-semibold text-gray-900 truncate max-w-[200px]" title={name || `Unknown (${item.item_id})`}>
+                                    {name || `Unknown (${item.item_id})`}
+                                  </p>
+                                  <p className="text-xs text-gray-400 font-mono mt-0.5">ID: {item.item_id}</p>
+                                </div>
+                              )
+                            })()}
                           </td>
                           <td className="px-3 py-4 text-sm">
                             <a

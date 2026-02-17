@@ -139,9 +139,91 @@ export const hackathonsApi = {
 }
 
 export const scholarshipsApi = {
-  fetch: () => fetchTable('scholarships'),
-  create: (scholarship: any) => createRecord('scholarships', scholarship),
-  update: (id: string, updates: any) => updateRecord('scholarships', id, updates),
+  async fetch() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated. Please log in again.')
+
+    const { data, error } = await supabase
+      .from('scholarships')
+      .select('*, scholarship_eligibility(*), scholarship_benefits(*)')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching scholarships:', error)
+      if (error.code === 'PGRST301' || error.message?.includes('permission denied') || error.message?.includes('policy')) {
+        throw new Error('Access denied to scholarships. Please check Row Level Security (RLS) policies in Supabase.')
+      }
+      throw error
+    }
+    return data || []
+  },
+
+  async create(scholarship: any) {
+    const { eligibility, benefits, ...baseData } = scholarship
+    const created = await createRecord('scholarships', baseData)
+
+    if (eligibility) {
+      const { error: elErr } = await supabase
+        .from('scholarship_eligibility')
+        .insert({ ...eligibility, scholarship_id: created.id })
+      if (elErr) console.error('Error creating eligibility:', elErr)
+    }
+
+    if (benefits) {
+      const { error: bnErr } = await supabase
+        .from('scholarship_benefits')
+        .insert({ ...benefits, scholarship_id: created.id })
+      if (bnErr) console.error('Error creating benefits:', bnErr)
+    }
+
+    return created
+  },
+
+  async update(id: string, updates: any) {
+    const { eligibility, benefits, ...baseUpdates } = updates
+    const updated = await updateRecord('scholarships', id, baseUpdates)
+
+    if (eligibility) {
+      const { data: existing } = await supabase
+        .from('scholarship_eligibility')
+        .select('id')
+        .eq('scholarship_id', id)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('scholarship_eligibility')
+          .update({ ...eligibility, updated_at: new Date().toISOString() })
+          .eq('scholarship_id', id)
+      } else {
+        await supabase
+          .from('scholarship_eligibility')
+          .insert({ ...eligibility, scholarship_id: id })
+      }
+    }
+
+    if (benefits) {
+      const { data: existing } = await supabase
+        .from('scholarship_benefits')
+        .select('id')
+        .eq('scholarship_id', id)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('scholarship_benefits')
+          .update({ ...benefits, updated_at: new Date().toISOString() })
+          .eq('scholarship_id', id)
+      } else {
+        await supabase
+          .from('scholarship_benefits')
+          .insert({ ...benefits, scholarship_id: id })
+      }
+    }
+
+    return updated
+  },
+
   delete: (id: string) => deleteRecord('scholarships', id),
 }
 
@@ -186,6 +268,33 @@ export const dashboardStats = {
   getHackathonsCount: () => getTableCount('hackathons'),
   getScholarshipsCount: () => getTableCount('scholarships'),
   getSignupsCount: () => getTableCount('signups'),
+}
+
+// Item name lookups (lightweight id+name queries for display)
+export const itemNameApi = {
+  async fetchEventNames() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return []
+    const { data, error } = await supabase.from('events').select('id, name')
+    if (error) { console.error('Error fetching event names:', error); return [] }
+    return (data || []).map((row: any) => ({ id: row.id, name: row.name }))
+  },
+
+  async fetchHackathonNames() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return []
+    const { data, error } = await supabase.from('hackathons').select('id, name')
+    if (error) { console.error('Error fetching hackathon names:', error); return [] }
+    return (data || []).map((row: any) => ({ id: row.id, name: row.name }))
+  },
+
+  async fetchScholarshipNames() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return []
+    const { data, error } = await supabase.from('scholarships').select('id, title')
+    if (error) { console.error('Error fetching scholarship names:', error); return [] }
+    return (data || []).map((row: any) => ({ id: row.id, name: row.title }))
+  },
 }
 
 // Link tracking analytics
