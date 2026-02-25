@@ -91,6 +91,16 @@ export default function EventsPage() {
     }
   }
 
+  const handleTogglePartnerEvent = async (event: any, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent opening detail view
+    try {
+      await eventsApi.update(event.id, { partner_event: !event.partner_event })
+      await loadEvents()
+    } catch (err: any) {
+      setError(err.message || 'Failed to update partner event status')
+    }
+  }
+
   const handleSubmit = async (data: any) => {
     try {
       setError('')
@@ -659,23 +669,40 @@ export default function EventsPage() {
                 className={`group relative rounded-xl shadow-sm border-2 transition-all duration-300 overflow-hidden cursor-pointer ${
                   event.is_highlight
                     ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-xl ring-2 ring-yellow-200 ring-opacity-50'
+                    : event.partner_event
+                    ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-400 hover:border-blue-500 hover:shadow-xl ring-2 ring-blue-200 ring-opacity-50'
                     : 'bg-white border-gray-200 hover:shadow-lg hover:border-primary-300'
                 }`}
               >
-                {/* Highlight Toggle Button */}
-                <button
-                  onClick={(e) => handleToggleHighlight(event, e)}
-                  className={`absolute top-4 right-4 z-10 p-2 rounded-full transition-all duration-200 ${
-                    event.is_highlight
-                      ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500 shadow-md'
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-yellow-500'
-                  }`}
-                  title={event.is_highlight ? 'Remove highlight' : 'Add highlight'}
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                </button>
+                {/* Toggle buttons: Partner Event (blue) + Highlight (yellow) */}
+                <div className="absolute top-4 right-4 z-10 flex gap-2">
+                  <button
+                    onClick={(e) => handleTogglePartnerEvent(event, e)}
+                    className={`p-2 rounded-full transition-all duration-200 ${
+                      event.partner_event
+                        ? 'bg-blue-400 text-blue-900 hover:bg-blue-500 shadow-md'
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-blue-500'
+                    }`}
+                    title={event.partner_event ? 'Remove partner event' : 'Mark as partner event'}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={(e) => handleToggleHighlight(event, e)}
+                    className={`p-2 rounded-full transition-all duration-200 ${
+                      event.is_highlight
+                        ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500 shadow-md'
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-yellow-500'
+                    }`}
+                    title={event.is_highlight ? 'Remove highlight' : 'Add highlight'}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </button>
+                </div>
 
                 {/* Header with Status and Category */}
                   <div className="px-6 pt-6 pb-4">
@@ -688,6 +715,11 @@ export default function EventsPage() {
                         {event.format && (
                           <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {event.format}
+                          </span>
+                        )}
+                        {event.partner_event && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Partner
                           </span>
                         )}
                         {event.is_highlight && (
