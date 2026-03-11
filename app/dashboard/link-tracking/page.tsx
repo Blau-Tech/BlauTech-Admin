@@ -40,6 +40,8 @@ export default function LinkTrackingPage() {
   const [itemNames, setItemNames] = useState<Record<string, string>>({})
   const [filterType, setFilterType] = useState<string>('all')
   const [filterPlatform, setFilterPlatform] = useState<string>('all')
+  const [trackedLinks, setTrackedLinks] = useState<Array<{ item_type: string; item_id: string; created_at: string }>>([])
+  const [sortBy, setSortBy] = useState<string>('total_desc')
 
   useEffect(() => {
     loadData()
@@ -49,17 +51,23 @@ export default function LinkTrackingPage() {
     try {
       setLoading(true)
       setError('')
-      const [platformData, itemData, total, eventNames, hackathonNames, scholarshipNames] = await Promise.all([
+      const [platformData, itemData, total, eventNames, hackathonNames, scholarshipNames, linksData] = await Promise.all([
         linkTrackingApi.fetchClicksByPlatform(),
         linkTrackingApi.fetchClicksByItem(),
         linkTrackingApi.fetchTotalClicks(),
         itemNameApi.fetchEventNames(),
         itemNameApi.fetchHackathonNames(),
         itemNameApi.fetchScholarshipNames(),
+        linkTrackingApi.fetchTrackedLinks(),
       ])
       setClicksByPlatform(platformData)
       setClicksByItem(itemData)
       setTotalClicks(total)
+      setTrackedLinks((linksData || []).map((l: { item_type: string; item_id: string; created_at: string }) => ({
+        item_type: l.item_type,
+        item_id: l.item_id,
+        created_at: l.created_at,
+      })))
 
       // Build lookup map: "event-7" -> "AI Conference 2025", etc.
       const nameMap: Record<string, string> = {}
@@ -97,6 +105,19 @@ export default function LinkTrackingPage() {
       .sort((a, b) => b.clicks - a.clicks)
   }, [clicksByPlatform])
 
+  // Latest link created_at per (item_type, item_id) for sorting
+  const linkCreatedAtByItem = useMemo(() => {
+    const out = new Map<string, string>()
+    trackedLinks.forEach((l) => {
+      const key = `${l.item_type}-${l.item_id}`
+      const existing = out.get(key)
+      if (!existing || (l.created_at && l.created_at > existing)) {
+        out.set(key, l.created_at || '')
+      }
+    })
+    return out
+  }, [trackedLinks])
+
   // Group items for the detail table: group by (item_type, item_id) with per-platform breakdown
   const groupedItems = useMemo(() => {
     const map = new Map<string, {
@@ -105,6 +126,7 @@ export default function LinkTrackingPage() {
       destination_url: string
       platforms: Record<string, number>
       total: number
+      created_at: string
     }>()
 
     clicksByItem.forEach((row) => {
@@ -116,6 +138,7 @@ export default function LinkTrackingPage() {
           destination_url: row.destination_url,
           platforms: {},
           total: 0,
+          created_at: linkCreatedAtByItem.get(key) || '',
         })
       }
       const entry = map.get(key)!
@@ -123,7 +146,7 @@ export default function LinkTrackingPage() {
       entry.total += row.clicks
     })
 
-    let items = Array.from(map.values()).sort((a, b) => b.total - a.total)
+    let items = Array.from(map.values())
 
     if (filterType !== 'all') {
       items = items.filter((item) => item.item_type === filterType)
@@ -132,8 +155,41 @@ export default function LinkTrackingPage() {
       items = items.filter((item) => item.platforms[filterPlatform])
     }
 
+    // Sort by selected option
+    const num = (id: string) => (id.match(/^\d+$/) ? parseInt(id, 10) : 0)
+    switch (sortBy) {
+      case 'total_asc':
+        items.sort((a, b) => a.total - b.total)
+        break
+      case 'item_id_asc':
+        items.sort((a, b) => {
+          const na = num(a.item_id)
+          const nb = num(b.item_id)
+          if (na !== nb) return na - nb
+          return a.item_id.localeCompare(b.item_id)
+        })
+        break
+      case 'item_id_desc':
+        items.sort((a, b) => {
+          const na = num(a.item_id)
+          const nb = num(b.item_id)
+          if (na !== nb) return nb - na
+          return b.item_id.localeCompare(a.item_id)
+        })
+        break
+      case 'created_asc':
+        items.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
+        break
+      case 'created_desc':
+        items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        break
+      default:
+        // total_desc
+        items.sort((a, b) => b.total - a.total)
+    }
+
     return items
-  }, [clicksByItem, filterType, filterPlatform])
+  }, [clicksByItem, filterType, filterPlatform, sortBy, linkCreatedAtByItem])
 
   // All platforms present in the data
   const allPlatforms = useMemo(() => {
@@ -246,7 +302,20 @@ export default function LinkTrackingPage() {
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <h2 className="text-xl font-bold text-gray-900">Per-Item Breakdown</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="text-sm text-gray-600 font-medium">Sort by:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+              >
+                <option value="total_desc">Total clicks (high first)</option>
+                <option value="total_asc">Total clicks (low first)</option>
+                <option value="created_desc">Newest links first</option>
+                <option value="created_asc">Oldest links first</option>
+                <option value="item_id_desc">Item ID (high first)</option>
+                <option value="item_id_asc">Item ID (low first)</option>
+              </select>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
