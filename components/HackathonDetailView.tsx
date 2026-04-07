@@ -2,14 +2,14 @@
 
 import { format } from 'date-fns'
 
-interface EventDetailViewProps {
-  event: any
+interface HackathonDetailViewProps {
+  hackathon: any
   onEdit: () => void
   onDelete: () => void
   onClose: () => void
 }
 
-export default function EventDetailView({ event, onEdit, onDelete, onClose }: EventDetailViewProps) {
+export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClose }: HackathonDetailViewProps) {
   const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) => (
     <div className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0">
       <div className="text-gray-400 mt-0.5 flex-shrink-0">
@@ -22,32 +22,23 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
     </div>
   )
 
+  const calendarIcon = (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )
+
   return (
     <div className="max-h-[85vh] overflow-y-auto">
       {/* Header */}
       <div className="border-b border-gray-200 pb-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">{event.name || event.title}</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">{hackathon.name || hackathon.title}</h2>
             <div className="flex items-center gap-2 flex-wrap">
-              {event.format && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {event.format}
-                </span>
-              )}
-              {event.is_highlight && (
+              {hackathon.is_highlight && (
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                   Highlight
-                </span>
-              )}
-              {event.partner_event && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Partner Event
-                </span>
-              )}
-              {event.sponsored_event && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                  Sponsored
                 </span>
               )}
             </div>
@@ -58,7 +49,7 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
       {/* Details Grid */}
       <div className="space-y-1">
         {/* Description */}
-        {event.description && (
+        {hackathon.description && (
           <InfoRow
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,30 +57,64 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
               </svg>
             }
             label="Description"
-            value={<p className="text-gray-700 whitespace-pre-wrap">{event.description}</p>}
+            value={<p className="text-gray-700 whitespace-pre-wrap">{hackathon.description}</p>}
           />
         )}
 
-        {/* Dates */}
+        {/* Start Date & Time */}
         <InfoRow
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          }
-          label="Event Date & Time"
+          icon={calendarIcon}
+          label="Start Date & Time"
           value={
-            <div className="space-y-1">
-              <p className="font-medium">
-                {event.start_date ? format(new Date(event.start_date), 'PP') : '-'}
-                {event.start_time && ` at ${event.start_time}`}
-              </p>
-            </div>
+            <p className="font-medium">
+              {hackathon.start_date ? format(new Date(hackathon.start_date), 'PP') : '-'}
+              {hackathon.start_time && ` at ${hackathon.start_time}`}
+            </p>
           }
         />
 
+        {/* End Date & Time */}
+        {hackathon.end_date && (
+          <InfoRow
+            icon={calendarIcon}
+            label="End Date & Time"
+            value={
+              <p className="font-medium">
+                {format(new Date(hackathon.end_date), 'PP')}
+                {hackathon.end_time && ` at ${hackathon.end_time}`}
+              </p>
+            }
+          />
+        )}
+
+        {/* Signup Deadline */}
+        {hackathon.signup_deadline && (
+          <InfoRow
+            icon={
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+            label="Signup Deadline"
+            value={<p className="font-medium">{format(new Date(hackathon.signup_deadline), 'PP')}</p>}
+          />
+        )}
+
+        {/* Prizes */}
+        {hackathon.prizes && (
+          <InfoRow
+            icon={
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+            label="Prizes"
+            value={<p className="font-medium whitespace-pre-wrap">{hackathon.prizes}</p>}
+          />
+        )}
+
         {/* Location */}
-        {event.location && (
+        {hackathon.location && (
           <InfoRow
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,28 +123,28 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
               </svg>
             }
             label="Location"
-            value={<p className="font-medium">{event.location}</p>}
+            value={<p className="font-medium">{hackathon.location}</p>}
           />
         )}
 
         {/* Link */}
-        {event.link && (
+        {hackathon.link && (
           <InfoRow
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             }
-            label="Event Link"
+            label="Hackathon Link"
             value={
               <a
-                href={event.link}
+                href={hackathon.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-600 hover:text-primary-800 font-medium inline-flex items-center gap-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                {event.link}
+                {hackathon.link}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -129,7 +154,7 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
         )}
 
         {/* Organisers */}
-        {event.organisers && (
+        {hackathon.organisers && (
           <InfoRow
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,12 +162,12 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
               </svg>
             }
             label="Organisers"
-            value={<p className="font-medium">{event.organisers}</p>}
+            value={<p className="font-medium">{hackathon.organisers}</p>}
           />
         )}
 
         {/* Social Media Posting Status */}
-        {(event.posted_linkedin || event.posted_whatsapp || event.posted_newsletter) && (
+        {(hackathon.posted_linkedin || hackathon.posted_whatsapp || hackathon.posted_newsletter) && (
           <InfoRow
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,19 +177,19 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
             label="Social Media Posting"
             value={
               <div className="flex flex-wrap gap-2">
-                {event.posted_linkedin && (
+                {hackathon.posted_linkedin && (
                   <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                    ✓ LinkedIn
+                    LinkedIn
                   </span>
                 )}
-                {event.posted_whatsapp && (
+                {hackathon.posted_whatsapp && (
                   <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                    ✓ WhatsApp
+                    WhatsApp
                   </span>
                 )}
-                {event.posted_newsletter && (
+                {hackathon.posted_newsletter && (
                   <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                    ✓ Newsletter
+                    Newsletter
                   </span>
                 )}
               </div>
@@ -182,9 +207,9 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
           label="Metadata"
           value={
             <div className="space-y-1 text-xs text-gray-500">
-              <p>Created: {event.created_at ? format(new Date(event.created_at), 'PPp') : '-'}</p>
-              {event.updated_at && (
-                <p>Last updated: {format(new Date(event.updated_at), 'PPp')}</p>
+              <p>Created: {hackathon.created_at ? format(new Date(hackathon.created_at), 'PPp') : '-'}</p>
+              {hackathon.updated_at && (
+                <p>Last updated: {format(new Date(hackathon.updated_at), 'PPp')}</p>
               )}
             </div>
           }
@@ -203,16 +228,15 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
           onClick={onEdit}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
         >
-          Edit Event
+          Edit Hackathon
         </button>
         <button
           onClick={onDelete}
           className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
         >
-          Delete Event
+          Delete Hackathon
         </button>
       </div>
     </div>
   )
 }
-

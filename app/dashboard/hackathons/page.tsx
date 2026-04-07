@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import DataTable from '@/components/DataTable'
 import Modal from '@/components/Modal'
-import EventForm from '@/components/EventForm'
-import EventDetailView from '@/components/EventDetailView'
+import HackathonForm from '@/components/HackathonForm'
+import HackathonDetailView from '@/components/HackathonDetailView'
 import { hackathonsApi } from '@/lib/api'
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
 
@@ -771,8 +771,8 @@ export default function HackathonsPage() {
         title="Hackathon Details"
       >
         {viewingHackathon && (
-          <EventDetailView
-            event={viewingHackathon}
+          <HackathonDetailView
+            hackathon={viewingHackathon}
             onEdit={() => {
               setIsDetailModalOpen(false)
               setEditingHackathon(viewingHackathon)
@@ -800,7 +800,7 @@ export default function HackathonsPage() {
         }}
         title={editingHackathon ? 'Edit Hackathon' : 'Add Hackathon'}
       >
-        <EventForm
+        <HackathonForm
           initialData={editingHackathon}
           onSubmit={handleSubmit}
           onCancel={() => {
