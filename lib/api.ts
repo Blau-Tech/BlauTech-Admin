@@ -145,7 +145,7 @@ export const scholarshipsApi = {
 
     const { data, error } = await supabase
       .from('scholarships')
-      .select('*, scholarship_eligibility(*), scholarship_benefits(*)')
+      .select('*, scholarship_eligibility(*, eligibility_criteria(*)), scholarship_benefits(*, benefit_types(*))')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -162,18 +162,16 @@ export const scholarshipsApi = {
     const { eligibility, benefits, ...baseData } = scholarship
     const created = await createRecord('scholarships', baseData)
 
-    if (eligibility) {
-      const { error: elErr } = await supabase
-        .from('scholarship_eligibility')
-        .insert({ ...eligibility, scholarship_id: created.id })
-      if (elErr) console.error('Error creating eligibility:', elErr)
+    if (eligibility?.length > 0) {
+      const rows = eligibility.map((e: any) => ({ scholarship_id: created.id, criteria_id: e.criteria_id, value: e.value }))
+      const { error } = await supabase.from('scholarship_eligibility').insert(rows)
+      if (error) console.error('Error creating eligibility:', error)
     }
 
-    if (benefits) {
-      const { error: bnErr } = await supabase
-        .from('scholarship_benefits')
-        .insert({ ...benefits, scholarship_id: created.id })
-      if (bnErr) console.error('Error creating benefits:', bnErr)
+    if (benefits?.length > 0) {
+      const rows = benefits.map((b: any) => ({ scholarship_id: created.id, benefit_type_id: b.benefit_type_id, value: b.value }))
+      const { error } = await supabase.from('scholarship_benefits').insert(rows)
+      if (error) console.error('Error creating benefits:', error)
     }
 
     return created
@@ -183,41 +181,22 @@ export const scholarshipsApi = {
     const { eligibility, benefits, ...baseUpdates } = updates
     const updated = await updateRecord('scholarships', id, baseUpdates)
 
-    if (eligibility) {
-      const { data: existing } = await supabase
-        .from('scholarship_eligibility')
-        .select('id')
-        .eq('scholarship_id', id)
-        .single()
-
-      if (existing) {
-        await supabase
-          .from('scholarship_eligibility')
-          .update({ ...eligibility, updated_at: new Date().toISOString() })
-          .eq('scholarship_id', id)
-      } else {
-        await supabase
-          .from('scholarship_eligibility')
-          .insert({ ...eligibility, scholarship_id: id })
+    if (eligibility !== undefined) {
+      // Delete old entries, insert new
+      await supabase.from('scholarship_eligibility').delete().eq('scholarship_id', id)
+      if (eligibility?.length > 0) {
+        const rows = eligibility.map((e: any) => ({ scholarship_id: id, criteria_id: e.criteria_id, value: e.value }))
+        const { error } = await supabase.from('scholarship_eligibility').insert(rows)
+        if (error) console.error('Error updating eligibility:', error)
       }
     }
 
-    if (benefits) {
-      const { data: existing } = await supabase
-        .from('scholarship_benefits')
-        .select('id')
-        .eq('scholarship_id', id)
-        .single()
-
-      if (existing) {
-        await supabase
-          .from('scholarship_benefits')
-          .update({ ...benefits, updated_at: new Date().toISOString() })
-          .eq('scholarship_id', id)
-      } else {
-        await supabase
-          .from('scholarship_benefits')
-          .insert({ ...benefits, scholarship_id: id })
+    if (benefits !== undefined) {
+      await supabase.from('scholarship_benefits').delete().eq('scholarship_id', id)
+      if (benefits?.length > 0) {
+        const rows = benefits.map((b: any) => ({ scholarship_id: id, benefit_type_id: b.benefit_type_id, value: b.value }))
+        const { error } = await supabase.from('scholarship_benefits').insert(rows)
+        if (error) console.error('Error updating benefits:', error)
       }
     }
 
@@ -225,6 +204,31 @@ export const scholarshipsApi = {
   },
 
   delete: (id: string) => deleteRecord('scholarships', id),
+}
+
+// Lookup tables for scholarship criteria and benefit types
+export const eligibilityCriteriaApi = {
+  async fetch() {
+    const { data, error } = await supabase
+      .from('eligibility_criteria')
+      .select('*')
+      .order('category')
+      .order('name')
+    if (error) { console.error('Error fetching eligibility criteria:', error); return [] }
+    return data || []
+  },
+}
+
+export const benefitTypesApi = {
+  async fetch() {
+    const { data, error } = await supabase
+      .from('benefit_types')
+      .select('*')
+      .order('category')
+      .order('name')
+    if (error) { console.error('Error fetching benefit types:', error); return [] }
+    return data || []
+  },
 }
 
 export const signupsApi = {

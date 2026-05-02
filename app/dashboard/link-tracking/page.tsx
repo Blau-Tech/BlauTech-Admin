@@ -23,12 +23,15 @@ const PLATFORM_CONFIG: Record<string, { label: string; color: string; bgColor: s
   linkedin: { label: 'LinkedIn', color: 'text-blue-800', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
   newsletter: { label: 'Newsletter', color: 'text-purple-800', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
   telegram: { label: 'Telegram', color: 'text-sky-800', bgColor: 'bg-sky-50', borderColor: 'border-sky-200' },
+  website: { label: 'Website', color: 'text-indigo-800', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
 }
 
 const ITEM_TYPE_CONFIG: Record<string, { label: string; pluralLabel: string; gradient: string }> = {
   event: { label: 'Event', pluralLabel: 'Events', gradient: 'from-blue-500 to-blue-600' },
   hackathon: { label: 'Hackathon', pluralLabel: 'Hackathons', gradient: 'from-green-500 to-green-600' },
   scholarship: { label: 'Scholarship', pluralLabel: 'Scholarships', gradient: 'from-purple-500 to-purple-600' },
+  student_club: { label: 'Student Club', pluralLabel: 'Student Clubs', gradient: 'from-emerald-500 to-emerald-600' },
+  community: { label: 'Community', pluralLabel: 'Community Links', gradient: 'from-indigo-500 to-indigo-600' },
 }
 
 export default function LinkTrackingPage() {

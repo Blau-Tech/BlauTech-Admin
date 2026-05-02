@@ -3,32 +3,33 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 
-interface EventFormData {
+interface HackathonFormData {
   name: string
   description?: string
   start_date: string
   start_time?: string
+  end_date?: string
+  end_time?: string
+  prizes?: string
+  signup_deadline?: string
   organisers?: string
   location?: string
-  format: string
   link?: string
   posted_linkedin?: boolean
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
   is_highlight?: boolean
-  partner_event?: boolean
-  sponsored_event?: boolean
 }
 
-interface EventFormProps {
+interface HackathonFormProps {
   initialData?: any
-  onSubmit: (data: EventFormData) => Promise<void>
+  onSubmit: (data: HackathonFormData) => Promise<void>
   onCancel: () => void
   title: string
 }
 
-export default function EventForm({ initialData, onSubmit, onCancel, title }: EventFormProps) {
-  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<EventFormData>({
+export default function HackathonForm({ initialData, onSubmit, onCancel, title }: HackathonFormProps) {
+  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<HackathonFormData>({
     mode: 'onChange',
   })
   const [loading, setLoading] = useState(false)
@@ -37,49 +38,50 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
   useEffect(() => {
     if (initialData) {
       const startDate = initialData.start_date ? new Date(initialData.start_date) : null
-      // Extract time from start_date if it exists, otherwise use start_time field
+      const endDate = initialData.end_date ? new Date(initialData.end_date) : null
+      const signupDeadline = initialData.signup_deadline ? new Date(initialData.signup_deadline) : null
+
       let startTime = initialData.start_time || ''
       if (!startTime && startDate) {
         const hours = startDate.getHours().toString().padStart(2, '0')
         const minutes = startDate.getMinutes().toString().padStart(2, '0')
         startTime = `${hours}:${minutes}`
       }
-      
+
+      let endTime = initialData.end_time || ''
+
       reset({
         name: initialData.name || initialData.title || '',
         description: initialData.description || '',
         start_date: startDate ? startDate.toISOString().slice(0, 10) : '',
         start_time: startTime,
+        end_date: endDate ? endDate.toISOString().slice(0, 10) : '',
+        end_time: endTime,
+        prizes: initialData.prizes || '',
+        signup_deadline: signupDeadline ? signupDeadline.toISOString().slice(0, 10) : '',
         organisers: initialData.organisers || initialData.organizer_name || '',
         location: initialData.location || '',
-        format: initialData.format || 'In-Person',
         link: initialData.link || initialData.registration_url || '',
         posted_linkedin: initialData.posted_linkedin || false,
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
         is_highlight: initialData.is_highlight || false,
-        partner_event: initialData.partner_event || false,
-        sponsored_event: initialData.sponsored_event || false,
       })
     } else {
       reset({
-        format: 'In-Person',
         posted_linkedin: false,
         posted_whatsapp: false,
         posted_newsletter: false,
         is_highlight: false,
-        partner_event: false,
-        sponsored_event: false,
       })
     }
   }, [initialData, reset])
 
-  const onSubmitForm = async (data: EventFormData) => {
+  const onSubmitForm = async (data: HackathonFormData) => {
     setFormError('')
     setLoading(true)
-    
+
     try {
-      // Validate URL if provided
       if (data.link && data.link.trim()) {
         try {
           new URL(data.link)
@@ -89,28 +91,49 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
           return
         }
       }
-      
-      // Process data for submission
+
       let processedData: any = { ...data }
-      
-      // Format start_date as date only (YYYY-MM-DD)
+
       if (data.start_date) {
         processedData.start_date = new Date(data.start_date).toISOString().split('T')[0]
       }
-      
-      // start_time should remain as time string (HH:MM:SS format)
+
       if (data.start_time) {
-        // Ensure time is in HH:MM:SS format
         const timeParts = data.start_time.split(':')
         if (timeParts.length === 2) {
           processedData.start_time = `${data.start_time}:00`
         }
       }
-      
+
+      if (data.end_date) {
+        processedData.end_date = new Date(data.end_date).toISOString().split('T')[0]
+      } else {
+        processedData.end_date = null
+      }
+
+      if (data.end_time) {
+        const timeParts = data.end_time.split(':')
+        if (timeParts.length === 2) {
+          processedData.end_time = `${data.end_time}:00`
+        }
+      } else {
+        processedData.end_time = null
+      }
+
+      if (data.signup_deadline) {
+        processedData.signup_deadline = new Date(data.signup_deadline).toISOString().split('T')[0]
+      } else {
+        processedData.signup_deadline = null
+      }
+
+      if (!data.prizes?.trim()) {
+        processedData.prizes = null
+      }
+
       await onSubmit(processedData)
     } catch (err: any) {
       console.error('Form submission error:', err)
-      setFormError(err.message || 'An error occurred while saving the event. Please try again.')
+      setFormError(err.message || 'An error occurred while saving the hackathon. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -136,11 +159,11 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
           </div>
         </div>
       )}
-      
+
       {/* Basic Information */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
-        
+
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
             Name *
@@ -162,16 +185,16 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
             id="description"
             rows={4}
             {...register('description')}
-            placeholder="Event description"
+            placeholder="Hackathon description"
             className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
           />
         </div>
       </div>
 
-      {/* Event Details */}
+      {/* Hackathon Details */}
       <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Event Details</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Hackathon Details</h3>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
@@ -199,19 +222,55 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="end_date"
+              {...register('end_date')}
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="end_time" className="block text-sm font-medium text-gray-700 mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              id="end_time"
+              {...register('end_time')}
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
+            />
+          </div>
+        </div>
+
         <div>
-          <label htmlFor="format" className="block text-sm font-medium text-gray-700 mb-1">
-            Format *
+          <label htmlFor="signup_deadline" className="block text-sm font-medium text-gray-700 mb-1">
+            Signup Deadline
           </label>
-          <select
-            id="format"
-            {...register('format', { required: 'Format is required' })}
+          <input
+            type="date"
+            id="signup_deadline"
+            {...register('signup_deadline')}
             className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
-          >
-            <option value="In-Person">In-Person</option>
-            <option value="Online">Online</option>
-            <option value="Hybrid">Hybrid</option>
-          </select>
+          />
+        </div>
+
+        <div>
+          <label htmlFor="prizes" className="block text-sm font-medium text-gray-700 mb-1">
+            Prizes
+          </label>
+          <textarea
+            id="prizes"
+            rows={2}
+            {...register('prizes')}
+            placeholder="e.g. $10,000 grand prize, $5,000 runner-up"
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
+          />
         </div>
 
         <div>
@@ -235,7 +294,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
             type="text"
             id="organisers"
             {...register('organisers')}
-            placeholder="Event organisers"
+            placeholder="Hackathon organisers"
             className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
           />
         </div>
@@ -249,7 +308,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
             id="link"
             {...register('link', {
               validate: (value) => {
-                if (!value) return true // Optional field
+                if (!value) return true
                 try {
                   new URL(value)
                   return true
@@ -258,7 +317,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
                 }
               }
             })}
-            placeholder="https://example.com/event"
+            placeholder="https://example.com/hackathon"
             className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm transition-colors px-4 py-2.5"
           />
           {errors.link && <p className="mt-1 text-sm text-red-600">{errors.link.message}</p>}
@@ -268,7 +327,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
       {/* Social Media & Highlight */}
       <div className="space-y-4 pt-4 border-t">
         <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Social Media & Highlight</h3>
-        
+
         <div className="space-y-3">
           <div className="flex items-center">
             <input
@@ -314,31 +373,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
             <label htmlFor="is_highlight" className="ml-2 block text-sm text-gray-700">
-              Highlight Event
-            </label>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="partner_event"
-              {...register('partner_event')}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="partner_event" className="ml-2 block text-sm text-gray-700">
-              Partner Event
-            </label>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="sponsored_event"
-              {...register('sponsored_event')}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="sponsored_event" className="ml-2 block text-sm text-gray-700">
-              Sponsored Event
+              Highlight Hackathon
             </label>
           </div>
         </div>
@@ -363,4 +398,3 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
     </form>
   )
 }
-
