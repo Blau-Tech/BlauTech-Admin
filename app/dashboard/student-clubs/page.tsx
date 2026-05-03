@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import StudentClubForm from '@/components/StudentClubForm'
 import { studentClubsApi } from '@/lib/api'
+import { useCityScope } from '@/lib/cityScope'
 
 type StudentClub = {
   id: number
@@ -17,6 +18,7 @@ type StudentClub = {
 }
 
 export default function StudentClubsPage() {
+  const { selectedCityId } = useCityScope()
   const [clubs, setClubs] = useState<StudentClub[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -65,12 +67,12 @@ export default function StudentClubsPage() {
 
   useEffect(() => {
     loadClubs()
-  }, [])
+  }, [selectedCityId])
 
   const loadClubs = async () => {
     try {
       setLoading(true)
-      const data = await studentClubsApi.fetch()
+      const data = await studentClubsApi.fetch(selectedCityId)
       setClubs(data as StudentClub[])
     } catch (err: any) {
       setError(err.message || 'Failed to load student clubs')

@@ -7,11 +7,13 @@ import Modal from '@/components/Modal'
 import HackathonForm from '@/components/HackathonForm'
 import HackathonDetailView from '@/components/HackathonDetailView'
 import { hackathonsApi } from '@/lib/api'
+import { useCityScope } from '@/lib/cityScope'
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
 export default function HackathonsPage() {
+  const { selectedCityId } = useCityScope()
   const [hackathons, setHackathons] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -25,12 +27,12 @@ export default function HackathonsPage() {
 
   useEffect(() => {
     loadHackathons()
-  }, [])
+  }, [selectedCityId])
 
   const loadHackathons = async () => {
     try {
       setLoading(true)
-      const data = await hackathonsApi.fetch()
+      const data = await hackathonsApi.fetch(selectedCityId)
       setHackathons(data)
     } catch (err: any) {
       setError(err.message)

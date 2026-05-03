@@ -123,16 +123,45 @@ export async function deleteRecord(tableName: string, id: string | number) {
   if (error) throw error
 }
 
+// City-scoped table fetch. Pass null/undefined cityId to skip filtering (super-admin view).
+// includeNull=true also returns rows with city_id IS NULL — used for hackathons (national/online).
+export async function fetchTableForCity(
+  tableName: string,
+  cityId: number | null | undefined,
+  options: { includeNull?: boolean } = {},
+) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not authenticated. Please log in again.')
+
+  let query = supabase.from(tableName).select('*').order('created_at', { ascending: false })
+  if (cityId != null) {
+    if (options.includeNull) {
+      query = query.or(`city_id.eq.${cityId},city_id.is.null`)
+    } else {
+      query = query.eq('city_id', cityId)
+    }
+  }
+  const { data, error } = await query
+  if (error) {
+    if (error.code === 'PGRST301' || error.message?.includes('permission denied') || error.message?.includes('policy')) {
+      throw new Error(`Access denied to ${tableName}. Please check Row Level Security (RLS) policies in Supabase.`)
+    }
+    throw error
+  }
+  return data || []
+}
+
 // Specific table operations
 export const eventsApi = {
-  fetch: () => fetchTable('events'),
+  fetch: (cityId?: number | null) => fetchTableForCity('events', cityId),
   create: (event: any) => createRecord('events', event),
   update: (id: string, updates: any) => updateRecord('events', id, updates),
   delete: (id: string) => deleteRecord('events', id),
 }
 
 export const hackathonsApi = {
-  fetch: () => fetchTable('hackathons'),
+  // Hackathons can be national (city_id null) — include those alongside the active city.
+  fetch: (cityId?: number | null) => fetchTableForCity('hackathons', cityId, { includeNull: true }),
   create: (hackathon: any) => createRecord('hackathons', hackathon),
   update: (id: string, updates: any) => updateRecord('hackathons', id, updates),
   delete: (id: string) => deleteRecord('hackathons', id),
@@ -231,13 +260,8 @@ export const benefitTypesApi = {
   },
 }
 
-export const signupsApi = {
-  fetch: () => fetchTable('signups'),
-  delete: (id: string) => deleteRecord('signups', id),
-}
-
 export const studentClubsApi = {
-  fetch: () => fetchTable('student_clubs'),
+  fetch: (cityId?: number | null) => fetchTableForCity('student_clubs', cityId),
   create: (club: any) => createRecord('student_clubs', club),
   update: (id: string | number, updates: any) => updateRecord('student_clubs', id, updates),
   delete: (id: string | number) => deleteRecord('student_clubs', id),
@@ -271,7 +295,6 @@ export const dashboardStats = {
   getEventsCount: () => getTableCount('events'),
   getHackathonsCount: () => getTableCount('hackathons'),
   getScholarshipsCount: () => getTableCount('scholarships'),
-  getSignupsCount: () => getTableCount('signups'),
 }
 
 // Item name lookups (lightweight id+name queries for display)

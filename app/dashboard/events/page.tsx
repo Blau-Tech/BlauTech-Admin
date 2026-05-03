@@ -7,12 +7,14 @@ import Modal from '@/components/Modal'
 import EventForm from '@/components/EventForm'
 import EventDetailView from '@/components/EventDetailView'
 import { eventsApi } from '@/lib/api'
+import { useCityScope } from '@/lib/cityScope'
 import { Input } from '@/components/ui/input'
 import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
 export default function EventsPage() {
+  const { selectedCityId } = useCityScope()
   const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -39,12 +41,12 @@ export default function EventsPage() {
 
   useEffect(() => {
     loadEvents()
-  }, [])
+  }, [selectedCityId])
 
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const data = await eventsApi.fetch()
+      const data = await eventsApi.fetch(selectedCityId)
       setEvents(data)
     } catch (err: any) {
       setError(err.message)

@@ -49,7 +49,6 @@ export default function Dashboard() {
     events: 0,
     hackathons: 0,
     scholarships: 0,
-    signups: 0,
   })
   const [calendarEvents, setCalendarEvents] = useState<any[]>([])
   const [calendarHackathons, setCalendarHackathons] = useState<any[]>([])
@@ -65,13 +64,12 @@ export default function Dashboard() {
   const loadStats = async () => {
     try {
       setLoading(true)
-      const [events, hackathons, scholarships, signups] = await Promise.all([
+      const [events, hackathons, scholarships] = await Promise.all([
         dashboardStats.getEventsCount(),
         dashboardStats.getHackathonsCount(),
         dashboardStats.getScholarshipsCount(),
-        dashboardStats.getSignupsCount(),
       ])
-      setStats({ events, hackathons, scholarships, signups })
+      setStats({ events, hackathons, scholarships })
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
@@ -127,15 +125,6 @@ export default function Dashboard() {
       textColor: 'text-purple-600',
       borderColor: 'border-purple-200',
     },
-    {
-      name: 'Signups',
-      href: '/dashboard/signups',
-      icon: <UsersIcon />,
-      gradient: 'from-amber-500 to-amber-600',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      borderColor: 'border-amber-200',
-    },
   ]
 
   const getCount = (name: string): number => {
@@ -146,8 +135,6 @@ export default function Dashboard() {
         return stats.hackathons
       case 'Scholarships':
         return stats.scholarships
-      case 'Signups':
-        return stats.signups
       default:
         return 0
     }
