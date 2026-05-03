@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { useCityScope } from '@/lib/cityScope'
 
 interface EventFormData {
   name: string
@@ -28,6 +29,7 @@ interface EventFormProps {
 }
 
 export default function EventForm({ initialData, onSubmit, onCancel, title }: EventFormProps) {
+  const { selectedCity } = useCityScope()
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<EventFormData>({
     mode: 'onChange',
   })
@@ -92,6 +94,18 @@ export default function EventForm({ initialData, onSubmit, onCancel, title }: Ev
       
       // Process data for submission
       let processedData: any = { ...data }
+
+      // Bind to the active city. Editing keeps the existing city_id; new records get the selected one.
+      if (initialData?.city_id) {
+        processedData.city_id = initialData.city_id
+      } else {
+        if (!selectedCity) {
+          setFormError('No active city selected. Pick a city in the navbar first.')
+          setLoading(false)
+          return
+        }
+        processedData.city_id = selectedCity.id
+      }
       
       // Format start_date as date only (YYYY-MM-DD)
       if (data.start_date) {

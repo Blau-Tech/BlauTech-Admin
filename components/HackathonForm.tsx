@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { useCityScope } from '@/lib/cityScope'
 
 interface HackathonFormData {
   name: string
@@ -29,6 +30,7 @@ interface HackathonFormProps {
 }
 
 export default function HackathonForm({ initialData, onSubmit, onCancel, title }: HackathonFormProps) {
+  const { selectedCity } = useCityScope()
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<HackathonFormData>({
     mode: 'onChange',
   })
@@ -93,6 +95,13 @@ export default function HackathonForm({ initialData, onSubmit, onCancel, title }
       }
 
       let processedData: any = { ...data }
+
+      // Hackathons may be national (city_id null). Edit preserves; new hackathons get the active city by default.
+      if (initialData) {
+        processedData.city_id = initialData.city_id ?? null
+      } else {
+        processedData.city_id = selectedCity?.id ?? null
+      }
 
       if (data.start_date) {
         processedData.start_date = new Date(data.start_date).toISOString().split('T')[0]

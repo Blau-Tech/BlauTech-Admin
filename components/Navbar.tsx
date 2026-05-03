@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { useCityScope } from '@/lib/cityScope'
 
 export default function Navbar() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
+  const { cities, selectedCityId, setSelectedCityId, loading } = useCityScope()
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
@@ -16,6 +18,7 @@ export default function Navbar() {
     { name: 'Student Clubs', href: '/dashboard/student-clubs' },
     { name: 'Signups', href: '/dashboard/signups' },
     { name: 'Link Tracking', href: '/dashboard/link-tracking' },
+    { name: 'Cities', href: '/dashboard/cities' },
   ]
 
   return (
@@ -48,7 +51,22 @@ export default function Navbar() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
+            <select
+              value={selectedCityId ?? ''}
+              onChange={(e) => setSelectedCityId(e.target.value ? Number(e.target.value) : null)}
+              disabled={loading || cities.length === 0}
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100"
+              aria-label="Active city"
+            >
+              {cities.length === 0 && <option value="">No cities</option>}
+              {cities.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {!c.enabled ? ' (disabled)' : ''}
+                </option>
+              ))}
+            </select>
+            <span className="text-sm text-gray-600 hidden sm:inline">
               {user?.email}
             </span>
             <button

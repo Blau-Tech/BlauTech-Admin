@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useCityScope } from '@/lib/cityScope'
 
 const UNIVERSITY_OPTIONS = [
   'TUM',
@@ -46,12 +47,14 @@ interface StudentClubFormProps {
     link: string
     universities: string[] | null
     topics: string[] | null
+    city_id: number
   }) => Promise<void>
   onCancel: () => void
   title: string
 }
 
 export default function StudentClubForm({ initialData, onSubmit, onCancel, title }: StudentClubFormProps) {
+  const { selectedCity } = useCityScope()
   const { register, handleSubmit, formState: { errors }, reset } = useForm<StudentClubFormData>({
     mode: 'onChange',
   })
@@ -95,12 +98,20 @@ export default function StudentClubForm({ initialData, onSubmit, onCancel, title
       const universitiesArr = Array.from(new Set((data.universities || []).filter(Boolean)))
       const topicsArr = Array.from(new Set((data.topics || []).filter(Boolean)))
 
+      const cityId = initialData?.city_id ?? selectedCity?.id
+      if (!cityId) {
+        setFormError('No active city selected. Pick a city in the navbar first.')
+        setLoading(false)
+        return
+      }
+
       await onSubmit({
         name: data.name.trim(),
         description: data.description.trim(),
         link: data.link.trim(),
         universities: universitiesArr.length ? universitiesArr : null,
         topics: topicsArr.length ? topicsArr : null,
+        city_id: cityId,
       })
     } catch (err: any) {
       console.error('Student club form submission error:', err)
