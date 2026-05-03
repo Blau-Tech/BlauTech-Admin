@@ -18,6 +18,7 @@ interface CityRow {
   lat: number | null
   lng: number | null
   enabled: boolean
+  enabled_sections: string[]
   created_at: string
 }
 
@@ -61,6 +62,7 @@ export default function CitiesPage() {
           lat: payload.lat,
           lng: payload.lng,
           enabled: payload.enabled,
+          enabled_sections: payload.enabled_sections,
           hero_copy: payload.hero_copy,
         })
         .eq('id', editing.id)

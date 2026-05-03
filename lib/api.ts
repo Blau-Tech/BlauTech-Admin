@@ -260,11 +260,6 @@ export const benefitTypesApi = {
   },
 }
 
-export const signupsApi = {
-  fetch: () => fetchTable('signups'),
-  delete: (id: string) => deleteRecord('signups', id),
-}
-
 export const studentClubsApi = {
   fetch: (cityId?: number | null) => fetchTableForCity('student_clubs', cityId),
   create: (club: any) => createRecord('student_clubs', club),
@@ -300,7 +295,6 @@ export const dashboardStats = {
   getEventsCount: () => getTableCount('events'),
   getHackathonsCount: () => getTableCount('hackathons'),
   getScholarshipsCount: () => getTableCount('scholarships'),
-  getSignupsCount: () => getTableCount('signups'),
 }
 
 // Item name lookups (lightweight id+name queries for display)

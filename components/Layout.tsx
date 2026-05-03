@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { CityScopeProvider } from '@/lib/cityScope'
 import Navbar from './Navbar'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -33,14 +32,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <CityScopeProvider>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
-          {children}
-        </main>
-      </div>
-    </CityScopeProvider>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
+        {children}
+      </main>
+    </div>
   )
 }
 

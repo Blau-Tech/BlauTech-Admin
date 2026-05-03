@@ -14,6 +14,7 @@ export interface City {
   lat: number | null
   lng: number | null
   enabled: boolean
+  enabled_sections: string[]
 }
 
 interface CityScopeValue {
