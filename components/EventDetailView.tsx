@@ -9,6 +9,16 @@ interface EventDetailViewProps {
   onClose: () => void
 }
 
+const formatFormatLabel = (value: string | null | undefined): string => {
+  if (!value) return ''
+  switch (value) {
+    case 'IN_PERSON': return 'In-Person'
+    case 'ONLINE': return 'Online'
+    case 'HYBRID': return 'Hybrid'
+    default: return value
+  }
+}
+
 export default function EventDetailView({ event, onEdit, onDelete, onClose }: EventDetailViewProps) {
   const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) => (
     <div className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0">
@@ -32,7 +42,12 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
             <div className="flex items-center gap-2 flex-wrap">
               {event.format && (
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {event.format}
+                  {formatFormatLabel(event.format)}
+                </span>
+              )}
+              {event.city && (
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  {event.city}
                 </span>
               )}
               {event.is_highlight && (
@@ -43,11 +58,6 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
               {event.partner_event && (
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                   Partner Event
-                </span>
-              )}
-              {event.sponsored_event && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                  Sponsored
                 </span>
               )}
             </div>
@@ -82,8 +92,19 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
             <div className="space-y-1">
               <p className="font-medium">
                 {event.start_date ? format(new Date(event.start_date), 'PP') : '-'}
-                {event.start_time && ` at ${event.start_time}`}
+                {event.start_time && ` at ${event.start_time.slice(0, 5)}`}
               </p>
+              {event.end_date && (
+                <p className="text-sm text-gray-600">
+                  Ends: {format(new Date(event.end_date), 'PP')}
+                  {event.end_time && ` at ${event.end_time.slice(0, 5)}`}
+                </p>
+              )}
+              {event.signup_deadline && (
+                <p className="text-sm text-gray-600">
+                  Signup deadline: {format(new Date(event.signup_deadline), 'PP')}
+                </p>
+              )}
             </div>
           }
         />

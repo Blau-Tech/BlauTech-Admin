@@ -68,7 +68,7 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           value={
             <p className="font-medium">
               {hackathon.start_date ? format(new Date(hackathon.start_date), 'PP') : '-'}
-              {hackathon.start_time && ` at ${hackathon.start_time}`}
+              {hackathon.start_time && ` at ${hackathon.start_time.slice(0, 5)}`}
             </p>
           }
         />
@@ -81,7 +81,7 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
             value={
               <p className="font-medium">
                 {format(new Date(hackathon.end_date), 'PP')}
-                {hackathon.end_time && ` at ${hackathon.end_time}`}
+                {hackathon.end_time && ` at ${hackathon.end_time.slice(0, 5)}`}
               </p>
             }
           />

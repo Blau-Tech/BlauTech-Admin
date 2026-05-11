@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/Layout'
-import DataTable from '@/components/DataTable'
 import Modal from '@/components/Modal'
 import ScholarshipForm from '@/components/ScholarshipForm'
 import { scholarshipsApi } from '@/lib/api'
@@ -73,7 +72,7 @@ export default function ScholarshipsPage() {
     try {
       setError('')
       setSuccessMessage('')
-      
+
       if (editingScholarship) {
         await scholarshipsApi.update(editingScholarship.id, data)
         setSuccessMessage('Scholarship updated successfully!')
@@ -81,8 +80,7 @@ export default function ScholarshipsPage() {
         await scholarshipsApi.create(data)
         setSuccessMessage('Scholarship created successfully!')
       }
-      
-      // Close modal and reload after a short delay to show success message
+
       setTimeout(() => {
         setIsModalOpen(false)
         setEditingScholarship(null)
@@ -91,8 +89,7 @@ export default function ScholarshipsPage() {
       }, 1000)
     } catch (err: any) {
       console.error('Error saving scholarship:', err)
-      // Error will be displayed in the form component
-      throw err // Re-throw so form can handle it
+      throw err
     }
   }
 
@@ -105,15 +102,11 @@ export default function ScholarshipsPage() {
     try {
       setWebhookLoading(true)
       setError('')
-      
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scholarship_link: scholarshipLink.trim(),
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scholarship_link: scholarshipLink.trim() }),
       })
 
       if (!response.ok) {
@@ -130,119 +123,61 @@ export default function ScholarshipsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-      draft: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Draft' },
-      published: { bg: 'bg-green-100', text: 'text-green-800', label: 'Published' },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
-      completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' },
-      postponed: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Postponed' },
-      accepting_applications: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Accepting Applications' },
-      reviewing: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Reviewing' },
-      awarded: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Awarded' },
-      closed: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Closed' },
-    }
-    const config = statusConfig[status] || statusConfig.draft
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
-        {config.label}
-      </span>
-    )
-  }
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      workshop: 'bg-purple-100 text-purple-800',
-      conference: 'bg-indigo-100 text-indigo-800',
-      meetup: 'bg-pink-100 text-pink-800',
-      webinar: 'bg-cyan-100 text-cyan-800',
-      networking: 'bg-orange-100 text-orange-800',
-      training: 'bg-teal-100 text-teal-800',
-      hackathon: 'bg-emerald-100 text-emerald-800',
-      other: 'bg-gray-100 text-gray-800',
-    }
-    return colors[category] || colors.other
-  }
-
-  // Helper function to format date for chronological view
   const formatDateLabel = (date: Date) => {
-    if (isToday(date)) {
-      return 'Today'
-    } else if (isTomorrow(date)) {
-      return 'Tomorrow'
-    } else {
-      return format(date, 'MMM d')
-    }
+    if (isToday(date)) return 'Today'
+    if (isTomorrow(date)) return 'Tomorrow'
+    return format(date, 'MMM d')
   }
 
-  const formatDayOfWeek = (date: Date) => {
-    return format(date, 'EEEE')
-  }
+  const formatDayOfWeek = (date: Date) => format(date, 'EEEE')
 
-  // Filter scholarships based on search
   const filteredScholarships = useMemo(() => {
     let filtered = [...scholarships]
 
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter((scholarship) => {
-        const title = (scholarship.title || '').toLowerCase()
-        const description = (scholarship.short_description || scholarship.description || '').toLowerCase()
-        const location = (scholarship.location || '').toLowerCase()
-        const organizer = (scholarship.organizer_name || '').toLowerCase()
-        return (
-          title.includes(query) ||
-          description.includes(query) ||
-          location.includes(query) ||
-          organizer.includes(query)
-        )
+      filtered = filtered.filter((s) => {
+        const title = (s.title || '').toLowerCase()
+        const description = (s.description || '').toLowerCase()
+        const organisation = (s.organisation || '').toLowerCase()
+        return title.includes(query) || description.includes(query) || organisation.includes(query)
       })
     }
 
     return filtered
   }, [scholarships, searchQuery])
 
-  // Group filtered scholarships by date for chronological view
+  // Group by deadline date for chronological view
   const scholarshipsByDate = useMemo(() => {
     const grouped: Record<string, any[]> = {}
-    filteredScholarships.forEach((scholarship) => {
-      if (scholarship.start_date) {
-        const date = startOfDay(new Date(scholarship.start_date))
-        const dateKey = date.toISOString()
-        if (!grouped[dateKey]) {
-          grouped[dateKey] = []
-        }
-        grouped[dateKey].push(scholarship)
+    filteredScholarships.forEach((s) => {
+      if (s.deadline) {
+        const date = startOfDay(new Date(s.deadline))
+        const key = date.toISOString()
+        if (!grouped[key]) grouped[key] = []
+        grouped[key].push(s)
       }
     })
-    
-    // Sort dates and scholarships within each date
+
     const sortedDates = Object.keys(grouped).sort()
-    const result: Array<{ date: Date; scholarships: any[] }> = []
-    sortedDates.forEach((dateKey) => {
-      result.push({
-        date: new Date(dateKey),
-        scholarships: grouped[dateKey].sort((a, b) => {
-          const timeA = a.start_date ? new Date(a.start_date).getTime() : 0
-          const timeB = b.start_date ? new Date(b.start_date).getTime() : 0
-          return timeA - timeB
-        }),
-      })
-    })
-    return result
+    return sortedDates.map((dateKey) => ({
+      date: new Date(dateKey),
+      scholarships: grouped[dateKey],
+    }))
   }, [filteredScholarships])
 
-  // Table columns configuration
   const tableColumns = [
     {
       key: 'title',
       label: 'Title',
       render: (value: any, row: any) => (
         <div>
-          <div className="font-medium text-gray-900">{value || '-'}</div>
-          {row.provider && (
-            <div className="text-sm text-gray-500 mt-0.5">{row.provider}</div>
+          <div className="font-medium text-gray-900 flex items-center gap-2">
+            {row.is_highlight && <span className="text-yellow-500" title="Highlighted">⭐</span>}
+            {value || '-'}
+          </div>
+          {row.organisation && (
+            <div className="text-sm text-gray-500 mt-0.5">{row.organisation}</div>
           )}
         </div>
       ),
@@ -250,7 +185,12 @@ export default function ScholarshipsPage() {
     {
       key: 'deadline',
       label: 'Deadline',
-      render: (value: any) => value || '-',
+      render: (value: any) => (value ? format(new Date(value), 'PP') : '-'),
+    },
+    {
+      key: 'cities',
+      label: 'Cities',
+      render: (value: any) => (Array.isArray(value) && value.length > 0 ? value.join(', ') : '-'),
     },
     {
       key: 'study_level',
@@ -258,20 +198,9 @@ export default function ScholarshipsPage() {
       render: (value: any) => (Array.isArray(value) && value.length > 0 ? value.join(', ') : '-'),
     },
     {
-      key: 'scholarship_benefits',
-      label: 'Stipend',
-      render: (value: any) => {
-        if (!Array.isArray(value)) return '-'
-        const stipendEntry = value.find((b: any) => b.benefit_types?.name === 'Monthly Stipend')
-        return stipendEntry?.value ? `${Number(stipendEntry.value).toLocaleString()} EUR/mo` : '-'
-      },
-    },
-    {
-      key: 'is_highlight',
-      label: 'Highlight',
-      render: (value: any) => value ? (
-        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Yes</span>
-      ) : '-',
+      key: 'fields_of_study',
+      label: 'Fields',
+      render: (value: any) => (Array.isArray(value) && value.length > 0 ? value.join(', ') : '-'),
     },
   ]
 
@@ -296,15 +225,10 @@ export default function ScholarshipsPage() {
               </div>
               <div className="ml-3 flex-1">
                 <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
-                </div>
+                <div className="mt-2 text-sm text-red-700"><p>{error}</p></div>
               </div>
               <div className="ml-auto pl-3">
-                <button
-                  onClick={() => setError('')}
-                  className="inline-flex text-red-400 hover:text-red-600"
-                >
+                <button onClick={() => setError('')} className="inline-flex text-red-400 hover:text-red-600">
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
@@ -313,23 +237,13 @@ export default function ScholarshipsPage() {
             </div>
           </div>
         )}
-        
+
         {successMessage && (
           <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
-              </div>
-            </div>
+            <p className="text-sm font-medium text-green-800">{successMessage}</p>
           </div>
         )}
-        
-        {/* Header */}
+
         <div className="sm:flex sm:items-center mb-6">
           <div className="sm:flex-auto">
             <h1 className="text-2xl font-bold text-gray-900">Scholarships</h1>
@@ -340,15 +254,12 @@ export default function ScholarshipsPage() {
             )}
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center gap-3">
-            {/* View Toggle Buttons */}
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('card')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'card'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                  viewMode === 'card' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
                 title="Card View"
               >
@@ -360,9 +271,7 @@ export default function ScholarshipsPage() {
                 type="button"
                 onClick={() => setViewMode('table')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                  viewMode === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
                 title="Table View"
               >
@@ -374,11 +283,9 @@ export default function ScholarshipsPage() {
                 type="button"
                 onClick={() => setViewMode('chronological')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'chronological'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                  viewMode === 'chronological' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
-                title="Chronological View"
+                title="Chronological View (by deadline)"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -388,42 +295,24 @@ export default function ScholarshipsPage() {
             <button
               type="button"
               onClick={handleAdd}
-              className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
+              className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
             >
               Add Scholarship
             </button>
           </div>
         </div>
 
-        {/* Search */}
         <div className="mb-6">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Search scholarships by title, description, location, or organizer..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              >
-                <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
+          <input
+            type="text"
+            placeholder="Search scholarships by title, description, or organisation..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+          />
         </div>
 
-        {/* Webhook URL Input */}
+        {/* n8n webhook input */}
         <div className="mb-8 flex justify-center">
           <div className="w-full max-w-2xl">
             <form onSubmit={handleWebhookSubmit} className="flex items-center gap-3">
@@ -438,7 +327,7 @@ export default function ScholarshipsPage() {
               <button
                 type="submit"
                 disabled={!scholarshipLink.trim() || !webhookUrl || webhookLoading}
-                className="px-6 py-3 text-base font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="px-6 py-3 text-base font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
               >
                 {webhookLoading ? 'Sending...' : 'Send'}
               </button>
@@ -446,119 +335,94 @@ export default function ScholarshipsPage() {
           </div>
         </div>
 
-        {/* Scholarships Display - Conditional Rendering */}
+        {/* Display */}
         {filteredScholarships.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
             <p className="text-gray-500">
-              {scholarships.length === 0
-                ? 'No scholarships available'
-                : 'No scholarships match your search criteria'}
+              {scholarships.length === 0 ? 'No scholarships available' : 'No scholarships match your search criteria'}
             </p>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="mt-4 text-sm text-primary-600 hover:text-primary-800 font-medium"
-              >
-                Clear search
-              </button>
-            )}
           </div>
         ) : viewMode === 'card' ? (
-          /* Card View */
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            {filteredScholarships.map((scholarship) => {
-              const benefitsArr: any[] = scholarship.scholarship_benefits || []
-              const stipendEntry = benefitsArr.find((b: any) => b.benefit_types?.name === 'Monthly Stipend')
-              const benefitBadges = benefitsArr
-                .filter((b: any) => b.benefit_types?.value_type === 'boolean')
-                .map((b: any) => b.benefit_types?.name)
-                .filter(Boolean)
-
-              return (
-                <div
-                  key={scholarship.id}
-                  onClick={() => handleViewDetails(scholarship)}
-                  className="group relative bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-lg hover:border-primary-300 transition-all duration-300 overflow-hidden cursor-pointer"
-                >
-                  <div className="px-6 pt-6 pb-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
-                          {scholarship.title}
-                        </h3>
-                        {scholarship.provider && (
-                          <p className="text-sm text-gray-500 mb-2">by {scholarship.provider}</p>
+            {filteredScholarships.map((s) => (
+              <div
+                key={s.id}
+                onClick={() => handleViewDetails(s)}
+                className={`group relative rounded-xl shadow-sm border-2 transition-all duration-300 overflow-hidden cursor-pointer ${
+                  s.is_highlight
+                    ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-xl ring-2 ring-yellow-200 ring-opacity-50'
+                    : 'bg-white border-gray-200 hover:shadow-lg hover:border-primary-300'
+                }`}
+              >
+                <div className="px-6 pt-6 pb-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2">{s.title}</h3>
+                      {s.organisation && (
+                        <p className="text-sm text-gray-500 mb-2">by {s.organisation}</p>
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {s.is_highlight && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Highlight</span>
                         )}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {scholarship.is_highlight && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Highlight</span>
-                          )}
-                          {stipendEntry?.value && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                              {Number(stipendEntry.value).toLocaleString()} EUR/mo
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {scholarship.short_description && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {scholarship.short_description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="px-6 pb-4 space-y-3 border-t border-gray-100 pt-4">
-                    {scholarship.deadline && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span>Deadline: {scholarship.deadline}</span>
-                      </div>
-                    )}
-
-                    {scholarship.study_level?.length > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                        </svg>
-                        <span>{scholarship.study_level.join(', ')}</span>
-                      </div>
-                    )}
-
-                    {benefitBadges.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {benefitBadges.map((badge) => (
-                          <span key={badge} className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                            {badge}
-                          </span>
+                        {Array.isArray(s.cities) && s.cities.map((c: string) => (
+                          <span key={c} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">{c}</span>
                         ))}
                       </div>
-                    )}
-
-                    {scholarship.url && (
-                      <a
-                        href={scholarship.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary-600 hover:text-primary-800 font-medium inline-flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View Details
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    )}
+                    </div>
                   </div>
+
+                  {s.description && (
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{s.description}</p>
+                  )}
                 </div>
-              )
-            })}
+
+                <div className="px-6 pb-4 space-y-3 border-t border-gray-100 pt-4">
+                  {s.deadline && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Deadline: {format(new Date(s.deadline), 'PP')}</span>
+                    </div>
+                  )}
+
+                  {Array.isArray(s.study_level) && s.study_level.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
+                      </svg>
+                      <span>{s.study_level.join(', ')}</span>
+                    </div>
+                  )}
+
+                  {Array.isArray(s.fields_of_study) && s.fields_of_study.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {s.fields_of_study.map((f: string) => (
+                        <span key={f} className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{f}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {s.url && (
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-600 hover:text-primary-800 font-medium inline-flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      View Details
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         ) : viewMode === 'table' ? (
-          /* Table View */
           <div className="mt-8 flow-root">
             <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -567,11 +431,7 @@ export default function ScholarshipsPage() {
                     <thead className="bg-gray-50">
                       <tr>
                         {tableColumns.map((column) => (
-                          <th
-                            key={column.key}
-                            scope="col"
-                            className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                          >
+                          <th key={column.key} scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
                             {column.label}
                           </th>
                         ))}
@@ -581,40 +441,18 @@ export default function ScholarshipsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {filteredScholarships.map((scholarship) => (
-                        <tr key={scholarship.id} className="hover:bg-gray-50 transition-colors">
+                      {filteredScholarships.map((s) => (
+                        <tr key={s.id} className={`transition-colors ${s.is_highlight ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-gray-50'}`}>
                           {tableColumns.map((column) => (
-                            <td
-                              key={column.key}
-                              className={`py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6 ${
-                                column.key === 'title' ? '' : 'whitespace-nowrap'
-                              }`}
-                            >
-                              {column.render
-                                ? column.render(scholarship[column.key], scholarship)
-                                : scholarship[column.key]?.toString() || '-'}
+                            <td key={column.key} className={`py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6 ${column.key === 'title' ? '' : 'whitespace-nowrap'}`}>
+                              {column.render ? column.render(s[column.key], s) : s[column.key]?.toString() || '-'}
                             </td>
                           ))}
                           <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                             <div className="flex justify-end space-x-4">
-                              <button
-                                onClick={() => handleViewDetails(scholarship)}
-                                className="text-primary-600 hover:text-primary-800 font-medium"
-                              >
-                                View
-                              </button>
-                              <button
-                                onClick={() => handleEdit(scholarship)}
-                                className="text-primary-600 hover:text-primary-800 font-medium"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(scholarship)}
-                                className="text-red-600 hover:text-red-800 font-medium"
-                              >
-                                Delete
-                              </button>
+                              <button onClick={() => handleViewDetails(s)} className="text-primary-600 hover:text-primary-800 font-medium">View</button>
+                              <button onClick={() => handleEdit(s)} className="text-primary-600 hover:text-primary-800 font-medium">Edit</button>
+                              <button onClick={() => handleDelete(s)} className="text-red-600 hover:text-red-800 font-medium">Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -626,102 +464,39 @@ export default function ScholarshipsPage() {
             </div>
           </div>
         ) : (
-          /* Chronological View */
+          /* Chronological view — grouped by deadline */
           <div className="relative">
-            {/* Timeline line */}
             <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-            
             <div className="space-y-8">
-              {scholarshipsByDate.map(({ date, scholarships: dateScholarships }, dateIndex) => (
+              {scholarshipsByDate.map(({ date, scholarships: dateScholarships }) => (
                 <div key={date.toISOString()} className="relative flex gap-6">
-                  {/* Date label on the left */}
                   <div className="flex-shrink-0 w-16 text-right pt-1">
                     <div className="sticky top-4">
                       <div className="relative">
                         <div className="absolute -left-8 top-2 w-4 h-4 bg-white border-2 border-primary-500 rounded-full"></div>
-                        <div className="text-sm font-semibold text-gray-900">
-                          {formatDateLabel(date)}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {formatDayOfWeek(date)}
-                        </div>
+                        <div className="text-sm font-semibold text-gray-900">{formatDateLabel(date)}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{formatDayOfWeek(date)}</div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Scholarships for this date */}
                   <div className="flex-1 space-y-4 pb-8">
-                    {dateScholarships.map((scholarship) => (
+                    {dateScholarships.map((s) => (
                       <div
-                        key={scholarship.id}
-                        onClick={() => handleViewDetails(scholarship)}
-                        className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-primary-300 transition-all duration-200 overflow-hidden cursor-pointer"
+                        key={s.id}
+                        onClick={() => handleViewDetails(s)}
+                        className={`group rounded-xl shadow-sm border transition-all duration-200 overflow-hidden cursor-pointer ${
+                          s.is_highlight
+                            ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-lg ring-2 ring-yellow-200 ring-opacity-50'
+                            : 'bg-white border-gray-200 hover:shadow-md hover:border-primary-300'
+                        }`}
                       >
                         <div className="p-6">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              {/* Deadline */}
-                              {scholarship.end_date && (
-                                <div className="text-sm font-medium text-gray-900 mb-2">
-                                  Deadline: {format(new Date(scholarship.end_date), 'HH:mm')}
-                                </div>
-                              )}
-                              
-                              {/* Title */}
-                              <h3 className="text-lg font-bold text-gray-900 mb-2">
-                                {scholarship.title}
-                              </h3>
-                              
-                              {/* Award Amount */}
-                              {scholarship.award_amount && (
-                                <p className="text-sm font-semibold text-primary-600 mb-3">
-                                  {scholarship.award_amount.toLocaleString()} {scholarship.award_currency || 'EUR'}
-                                </p>
-                              )}
-                              
-                              {/* Provider */}
-                              {scholarship.organizer_name && (
-                                <p className="text-sm text-gray-600 mb-3">
-                                  By {scholarship.organizer_name}
-                                  {scholarship.organizer_contactinfo && `, ${scholarship.organizer_contactinfo}`}
-                                </p>
-                              )}
-                              
-                              {/* Description */}
-                              {scholarship.short_description && (
-                                <p className="text-sm text-gray-500 line-clamp-2">
-                                  {scholarship.short_description}
-                                </p>
-                              )}
-                              
-                              {/* Badges */}
-                              <div className="flex items-center gap-2 flex-wrap mt-3">
-                                {getStatusBadge(scholarship.status)}
-                                {scholarship.category && (
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(scholarship.category)}`}>
-                                    {scholarship.category.charAt(0).toUpperCase() + scholarship.category.slice(1)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Scholarship image/logo placeholder */}
-                            <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
-                              {scholarship.image_url ? (
-                                <img
-                                  src={scholarship.image_url}
-                                  alt={scholarship.title}
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
-                              ) : (
-                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14v9M12 5v9" />
-                                </svg>
-                              )}
-                            </div>
+                          <div className="text-sm font-medium text-gray-900 mb-2">
+                            Deadline: {format(new Date(s.deadline), 'PP')}
                           </div>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
+                          {s.organisation && <p className="text-sm text-gray-600 mb-3">By {s.organisation}</p>}
+                          {s.description && <p className="text-sm text-gray-500 line-clamp-2">{s.description}</p>}
                         </div>
                       </div>
                     ))}
@@ -742,131 +517,106 @@ export default function ScholarshipsPage() {
         }}
         title="Scholarship Details"
       >
-        {viewingScholarship && (() => {
-          const eligibilityEntries: any[] = viewingScholarship.scholarship_eligibility || []
-          const benefitEntries: any[] = viewingScholarship.scholarship_benefits || []
-
-          // Group eligibility by category
-          const eligibilityByCategory: Record<string, any[]> = {}
-          eligibilityEntries.forEach((e: any) => {
-            const cat = e.eligibility_criteria?.category || 'other'
-            if (!eligibilityByCategory[cat]) eligibilityByCategory[cat] = []
-            eligibilityByCategory[cat].push(e)
-          })
-
-          // Group benefits by category
-          const benefitsByCategory: Record<string, any[]> = {}
-          benefitEntries.forEach((b: any) => {
-            const cat = b.benefit_types?.category || 'other'
-            if (!benefitsByCategory[cat]) benefitsByCategory[cat] = []
-            benefitsByCategory[cat].push(b)
-          })
-
-          const formatValue = (entry: any, lookupKey: string) => {
-            const vt = entry[lookupKey]?.value_type
-            if (vt === 'boolean') return null // boolean entries just show the name as a badge
-            if (vt === 'currency') return `${Number(entry.value).toLocaleString()} EUR`
-            return entry.value
-          }
-
-          return (
-            <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{viewingScholarship.title}</h2>
-                <p className="text-sm text-gray-500 mt-1">by {viewingScholarship.provider}</p>
-              </div>
-
-              {viewingScholarship.short_description && (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingScholarship.short_description}</p>
+        {viewingScholarship && (
+          <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{viewingScholarship.title}</h2>
+              {viewingScholarship.organisation && (
+                <p className="text-sm text-gray-500 mt-1">by {viewingScholarship.organisation}</p>
               )}
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {viewingScholarship.deadline && (
-                  <div><span className="font-medium text-gray-500">Deadline:</span> <span className="text-gray-900">{viewingScholarship.deadline}</span></div>
+              <div className="flex items-center gap-2 flex-wrap mt-2">
+                {viewingScholarship.is_highlight && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Highlight</span>
                 )}
-                {viewingScholarship.url && (
-                  <div><span className="font-medium text-gray-500">URL:</span> <a href={viewingScholarship.url} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">Link</a></div>
-                )}
-                {viewingScholarship.study_level?.length > 0 && (
-                  <div><span className="font-medium text-gray-500">Study Level:</span> <span className="text-gray-900">{viewingScholarship.study_level.join(', ')}</span></div>
-                )}
-                {viewingScholarship.fields_of_study?.length > 0 && (
-                  <div><span className="font-medium text-gray-500">Fields:</span> <span className="text-gray-900">{viewingScholarship.fields_of_study.join(', ')}</span></div>
-                )}
-              </div>
-
-              {/* Eligibility */}
-              {eligibilityEntries.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2 border-b pb-1">Eligibility Requirements</h3>
-                  {Object.entries(eligibilityByCategory).map(([category, entries]) => (
-                    <div key={category} className="mb-3">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                        {category}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {entries.map((e: any) => {
-                          const display = formatValue(e, 'eligibility_criteria')
-                          return (
-                            <span key={e.id} className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700">
-                              {e.eligibility_criteria?.name}{display ? `: ${display}` : ''}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Benefits */}
-              {benefitEntries.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2 border-b pb-1">Benefits</h3>
-                  {Object.entries(benefitsByCategory).map(([category, entries]) => (
-                    <div key={category} className="mb-3">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                        {category}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {entries.map((b: any) => {
-                          const display = formatValue(b, 'benefit_types')
-                          return (
-                            <span key={b.id} className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                              {b.benefit_types?.name}{display ? `: ${display}` : ''}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  onClick={() => {
-                    setIsDetailModalOpen(false)
-                    setEditingScholarship(viewingScholarship)
-                    setIsModalOpen(true)
-                  }}
-                  className="px-4 py-2 text-sm font-semibold text-primary-600 border border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDetailModalOpen(false)
-                    handleDelete(viewingScholarship)
-                  }}
-                  className="px-4 py-2 text-sm font-semibold text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-                >
-                  Delete
-                </button>
+                {Array.isArray(viewingScholarship.cities) && viewingScholarship.cities.map((c: string) => (
+                  <span key={c} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">{c}</span>
+                ))}
               </div>
             </div>
-          )
-        })()}
+
+            {viewingScholarship.description && (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Description</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingScholarship.description}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {viewingScholarship.deadline && (
+                <div>
+                  <span className="font-medium text-gray-500">Deadline:</span>{' '}
+                  <span className="text-gray-900">{format(new Date(viewingScholarship.deadline), 'PP')}</span>
+                </div>
+              )}
+              {viewingScholarship.url && (
+                <div>
+                  <span className="font-medium text-gray-500">URL:</span>{' '}
+                  <a href={viewingScholarship.url} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+                    Link
+                  </a>
+                </div>
+              )}
+              {Array.isArray(viewingScholarship.study_level) && viewingScholarship.study_level.length > 0 && (
+                <div>
+                  <span className="font-medium text-gray-500">Study Level:</span>{' '}
+                  <span className="text-gray-900">{viewingScholarship.study_level.join(', ')}</span>
+                </div>
+              )}
+              {Array.isArray(viewingScholarship.fields_of_study) && viewingScholarship.fields_of_study.length > 0 && (
+                <div>
+                  <span className="font-medium text-gray-500">Fields:</span>{' '}
+                  <span className="text-gray-900">{viewingScholarship.fields_of_study.join(', ')}</span>
+                </div>
+              )}
+            </div>
+
+            {viewingScholarship.eligibility_notes && (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Eligibility Notes</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingScholarship.eligibility_notes}</p>
+              </div>
+            )}
+
+            {(viewingScholarship.posted_linkedin || viewingScholarship.posted_whatsapp || viewingScholarship.posted_newsletter) && (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Published On</h3>
+                <div className="flex flex-wrap gap-2">
+                  {viewingScholarship.posted_linkedin && (
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">LinkedIn</span>
+                  )}
+                  {viewingScholarship.posted_whatsapp && (
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">WhatsApp</span>
+                  )}
+                  {viewingScholarship.posted_newsletter && (
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">Newsletter</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false)
+                  setEditingScholarship(viewingScholarship)
+                  setIsModalOpen(true)
+                }}
+                className="px-4 py-2 text-sm font-semibold text-primary-600 border border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false)
+                  handleDelete(viewingScholarship)
+                }}
+                className="px-4 py-2 text-sm font-semibold text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Edit/Create Modal */}

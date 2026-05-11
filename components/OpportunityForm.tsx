@@ -1,28 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+type OpportunityType = 'PROGRAM' | 'FELLOWSHIP'
 type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
 
 const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID']
-const STUDY_LEVEL_OPTIONS = ['Bachelor', 'Masters', 'PhD', 'MBA', 'Postdoc']
-const FIELD_OPTIONS = ['Computer Science', 'Business', 'Engineering', 'AI', 'Robotics', 'Medicine', 'Law', 'Other']
 
-interface ScholarshipFormData {
+interface OpportunityFormData {
+  opportunity_type: OpportunityType
   title: string
   organisation: string
   description: string
   url: string
   deadline?: string
-  eligibility_notes?: string
   posted_linkedin?: boolean
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
   is_highlight?: boolean
 }
 
-interface ScholarshipFormProps {
+interface OpportunityFormProps {
   initialData?: any
   onSubmit: (data: any) => Promise<void>
   onCancel: () => void
@@ -71,58 +70,48 @@ function MultiSelect({
   )
 }
 
-export default function ScholarshipForm({ initialData, onSubmit, onCancel }: ScholarshipFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<ScholarshipFormData>({ mode: 'onChange' })
+export default function OpportunityForm({ initialData, onSubmit, onCancel }: OpportunityFormProps) {
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<OpportunityFormData>({
+    mode: 'onChange',
+  })
 
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
-
   const [cities, setCities] = useState<string[]>([])
-  const [studyLevel, setStudyLevel] = useState<string[]>([])
-  const [fieldsOfStudy, setFieldsOfStudy] = useState<string[]>([])
 
   useEffect(() => {
     if (initialData) {
       reset({
+        opportunity_type: (initialData.opportunity_type as OpportunityType) || 'PROGRAM',
         title: initialData.title || '',
         organisation: initialData.organisation || '',
         description: initialData.description || '',
         url: initialData.url || '',
         deadline: initialData.deadline || '',
-        eligibility_notes: initialData.eligibility_notes || '',
         posted_linkedin: initialData.posted_linkedin || false,
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
         is_highlight: initialData.is_highlight || false,
       })
       setCities(Array.isArray(initialData.cities) ? initialData.cities : [])
-      setStudyLevel(Array.isArray(initialData.study_level) ? initialData.study_level : [])
-      setFieldsOfStudy(Array.isArray(initialData.fields_of_study) ? initialData.fields_of_study : [])
     } else {
       reset({
+        opportunity_type: 'PROGRAM',
         title: '',
         organisation: '',
         description: '',
         url: '',
         deadline: '',
-        eligibility_notes: '',
         posted_linkedin: false,
         posted_whatsapp: false,
         posted_newsletter: false,
         is_highlight: false,
       })
       setCities([])
-      setStudyLevel([])
-      setFieldsOfStudy([])
     }
   }, [initialData, reset])
 
-  const onSubmitForm = async (data: ScholarshipFormData) => {
+  const onSubmitForm = async (data: OpportunityFormData) => {
     setFormError('')
     setLoading(true)
 
@@ -135,16 +124,14 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         }
       }
 
-      const payload = {
+      const payload: any = {
+        opportunity_type: data.opportunity_type,
         title: data.title.trim(),
         organisation: data.organisation.trim(),
         description: data.description.trim(),
         url: data.url.trim(),
         deadline: data.deadline?.trim() ? data.deadline : null,
-        eligibility_notes: data.eligibility_notes?.trim() ? data.eligibility_notes : null,
         cities,
-        study_level: studyLevel,
-        fields_of_study: fieldsOfStudy,
         posted_linkedin: !!data.posted_linkedin,
         posted_whatsapp: !!data.posted_whatsapp,
         posted_newsletter: !!data.posted_newsletter,
@@ -154,7 +141,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
       await onSubmit(payload)
     } catch (err: any) {
       console.error('Form submission error:', err)
-      setFormError(err.message || 'An error occurred while saving the scholarship. Please try again.')
+      setFormError(err.message || 'An error occurred while saving the opportunity. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -182,6 +169,15 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
 
         <div>
+          <label htmlFor="opportunity_type" className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+          <select id="opportunity_type" {...register('opportunity_type', { required: 'Type is required' })}
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm px-4 py-2.5">
+            <option value="PROGRAM">Program</option>
+            <option value="FELLOWSHIP">Fellowship</option>
+          </select>
+        </div>
+
+        <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
           <input type="text" id="title" {...register('title', { required: 'Title is required' })}
             className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm px-4 py-2.5" />
@@ -198,7 +194,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
           <textarea id="description" rows={4} {...register('description', { required: 'Description is required' })}
-            placeholder="Scholarship description"
+            placeholder="Opportunity description"
             className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm px-4 py-2.5" />
           {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>}
         </div>
@@ -206,7 +202,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">URL *</label>
-            <input type="url" id="url" {...register('url', { required: 'URL is required' })} placeholder="https://example.com/scholarship"
+            <input type="url" id="url" {...register('url', { required: 'URL is required' })} placeholder="https://example.com/opportunity"
               className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm px-4 py-2.5" />
             {errors.url && <p className="mt-1 text-sm text-red-600">{errors.url.message}</p>}
           </div>
@@ -218,15 +214,6 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         </div>
 
         <MultiSelect label="Cities" options={CITY_OPTIONS} selected={cities} onChange={setCities} />
-        <MultiSelect label="Study Level" options={STUDY_LEVEL_OPTIONS} selected={studyLevel} onChange={setStudyLevel} />
-        <MultiSelect label="Fields of Study" options={FIELD_OPTIONS} selected={fieldsOfStudy} onChange={setFieldsOfStudy} />
-
-        <div>
-          <label htmlFor="eligibility_notes" className="block text-sm font-medium text-gray-700 mb-1">Eligibility Notes</label>
-          <textarea id="eligibility_notes" rows={3} {...register('eligibility_notes')}
-            placeholder="Free-text notes about eligibility (e.g. GPA, citizenship, etc.)"
-            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 sm:text-sm px-4 py-2.5" />
-        </div>
       </div>
 
       <div className="space-y-4 pt-4 border-t">
@@ -236,7 +223,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
             { id: 'posted_linkedin', label: 'Posted on LinkedIn' },
             { id: 'posted_whatsapp', label: 'Posted on WhatsApp' },
             { id: 'posted_newsletter', label: 'Posted in Newsletter' },
-            { id: 'is_highlight', label: 'Highlight Scholarship' },
+            { id: 'is_highlight', label: 'Highlight Opportunity' },
           ].map((item) => (
             <div key={item.id} className="flex items-center">
               <input type="checkbox" id={item.id} {...register(item.id as any)}

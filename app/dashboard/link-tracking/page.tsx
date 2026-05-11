@@ -2,48 +2,25 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/Layout'
-import { linkTrackingApi, itemNameApi } from '@/lib/api'
+import { linkTrackingApi, TrackedLinkWithStats } from '@/lib/api'
 
-interface ClicksByPlatform {
-  platform: string
-  item_type: string
-  clicks: number
+type Channel = 'WHATSAPP' | 'LINKEDIN' | 'WEBSITE' | 'NEWSLETTER'
+
+const CHANNEL_CONFIG: Record<Channel, { label: string; color: string; bgColor: string; borderColor: string }> = {
+  WHATSAPP: { label: 'WhatsApp', color: 'text-green-800', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+  LINKEDIN: { label: 'LinkedIn', color: 'text-blue-800', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+  WEBSITE: { label: 'Website', color: 'text-indigo-800', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
+  NEWSLETTER: { label: 'Newsletter', color: 'text-purple-800', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
 }
 
-interface ClicksByItem {
-  item_type: string
-  item_id: string
-  platform: string
-  destination_url: string
-  clicks: number
-}
-
-const PLATFORM_CONFIG: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
-  whatsapp: { label: 'WhatsApp', color: 'text-green-800', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
-  linkedin: { label: 'LinkedIn', color: 'text-blue-800', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-  newsletter: { label: 'Newsletter', color: 'text-purple-800', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
-  telegram: { label: 'Telegram', color: 'text-sky-800', bgColor: 'bg-sky-50', borderColor: 'border-sky-200' },
-  website: { label: 'Website', color: 'text-indigo-800', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
-}
-
-const ITEM_TYPE_CONFIG: Record<string, { label: string; pluralLabel: string; gradient: string }> = {
-  event: { label: 'Event', pluralLabel: 'Events', gradient: 'from-blue-500 to-blue-600' },
-  hackathon: { label: 'Hackathon', pluralLabel: 'Hackathons', gradient: 'from-green-500 to-green-600' },
-  scholarship: { label: 'Scholarship', pluralLabel: 'Scholarships', gradient: 'from-purple-500 to-purple-600' },
-  student_club: { label: 'Student Club', pluralLabel: 'Student Clubs', gradient: 'from-emerald-500 to-emerald-600' },
-  community: { label: 'Community', pluralLabel: 'Community Links', gradient: 'from-indigo-500 to-indigo-600' },
-}
+const ALL_CHANNELS: Channel[] = ['WHATSAPP', 'LINKEDIN', 'WEBSITE', 'NEWSLETTER']
 
 export default function LinkTrackingPage() {
-  const [clicksByPlatform, setClicksByPlatform] = useState<ClicksByPlatform[]>([])
-  const [clicksByItem, setClicksByItem] = useState<ClicksByItem[]>([])
+  const [trackedLinks, setTrackedLinks] = useState<TrackedLinkWithStats[]>([])
   const [totalClicks, setTotalClicks] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [itemNames, setItemNames] = useState<Record<string, string>>({})
-  const [filterType, setFilterType] = useState<string>('all')
-  const [filterPlatform, setFilterPlatform] = useState<string>('all')
-  const [trackedLinks, setTrackedLinks] = useState<Array<{ item_type: string; item_id: string; created_at: string }>>([])
+  const [filterChannel, setFilterChannel] = useState<Channel | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<string>('total_desc')
 
   useEffect(() => {
@@ -54,30 +31,12 @@ export default function LinkTrackingPage() {
     try {
       setLoading(true)
       setError('')
-      const [platformData, itemData, total, eventNames, hackathonNames, scholarshipNames, linksData] = await Promise.all([
-        linkTrackingApi.fetchClicksByPlatform(),
-        linkTrackingApi.fetchClicksByItem(),
-        linkTrackingApi.fetchTotalClicks(),
-        itemNameApi.fetchEventNames(),
-        itemNameApi.fetchHackathonNames(),
-        itemNameApi.fetchScholarshipNames(),
+      const [links, total] = await Promise.all([
         linkTrackingApi.fetchTrackedLinks(),
+        linkTrackingApi.fetchTotalClicks(),
       ])
-      setClicksByPlatform(platformData)
-      setClicksByItem(itemData)
+      setTrackedLinks(links)
       setTotalClicks(total)
-      setTrackedLinks((linksData || []).map((l: { item_type: string; item_id: string; created_at: string }) => ({
-        item_type: l.item_type,
-        item_id: l.item_id,
-        created_at: l.created_at,
-      })))
-
-      // Build lookup map: "event-7" -> "AI Conference 2025", etc.
-      const nameMap: Record<string, string> = {}
-      eventNames.forEach((e: { id: string | number; name: string }) => { nameMap[`event-${e.id}`] = e.name })
-      hackathonNames.forEach((h: { id: string | number; name: string }) => { nameMap[`hackathon-${h.id}`] = h.name })
-      scholarshipNames.forEach((s: { id: string | number; name: string }) => { nameMap[`scholarship-${s.id}`] = s.name })
-      setItemNames(nameMap)
     } catch (err: any) {
       console.error('Error loading link tracking data:', err)
       setError(err.message || 'Failed to load link tracking data')
@@ -86,99 +45,63 @@ export default function LinkTrackingPage() {
     }
   }
 
-  // Aggregate clicks by platform (across all item types)
-  const platformTotals = useMemo(() => {
+  // Aggregate clicks by channel
+  const channelTotals = useMemo(() => {
     const totals: Record<string, number> = {}
-    clicksByPlatform.forEach((row) => {
-      totals[row.platform] = (totals[row.platform] || 0) + row.clicks
-    })
-    return Object.entries(totals)
-      .map(([platform, clicks]) => ({ platform, clicks }))
-      .sort((a, b) => b.clicks - a.clicks)
-  }, [clicksByPlatform])
-
-  // Aggregate clicks by item type
-  const typeTotals = useMemo(() => {
-    const totals: Record<string, number> = {}
-    clicksByPlatform.forEach((row) => {
-      totals[row.item_type] = (totals[row.item_type] || 0) + row.clicks
-    })
-    return Object.entries(totals)
-      .map(([item_type, clicks]) => ({ item_type, clicks }))
-      .sort((a, b) => b.clicks - a.clicks)
-  }, [clicksByPlatform])
-
-  // Latest link created_at per (item_type, item_id) for sorting
-  const linkCreatedAtByItem = useMemo(() => {
-    const out = new Map<string, string>()
     trackedLinks.forEach((l) => {
-      const key = `${l.item_type}-${l.item_id}`
-      const existing = out.get(key)
-      if (!existing || (l.created_at && l.created_at > existing)) {
-        out.set(key, l.created_at || '')
-      }
+      totals[l.channel] = (totals[l.channel] || 0) + l.click_count
     })
-    return out
+    return ALL_CHANNELS
+      .filter((c) => totals[c] !== undefined)
+      .map((channel) => ({ channel, clicks: totals[channel] || 0 }))
+      .sort((a, b) => b.clicks - a.clicks)
   }, [trackedLinks])
 
-  // Group items for the detail table: group by (item_type, item_id) with per-platform breakdown
-  const groupedItems = useMemo(() => {
+  // Aggregate per-event with channel breakdown
+  const groupedByEvent = useMemo(() => {
     const map = new Map<string, {
-      item_type: string
-      item_id: string
-      destination_url: string
-      platforms: Record<string, number>
+      event_id: string
+      event_name: string
+      channels: Record<string, number>
       total: number
       created_at: string
     }>()
 
-    clicksByItem.forEach((row) => {
-      const key = `${row.item_type}-${row.item_id}`
+    trackedLinks.forEach((link) => {
+      const key = link.event_id
       if (!map.has(key)) {
         map.set(key, {
-          item_type: row.item_type,
-          item_id: row.item_id,
-          destination_url: row.destination_url,
-          platforms: {},
+          event_id: link.event_id,
+          event_name: link.event_name || `Unknown event (${link.event_id.slice(0, 8)})`,
+          channels: {},
           total: 0,
-          created_at: linkCreatedAtByItem.get(key) || '',
+          created_at: link.created_at,
         })
       }
       const entry = map.get(key)!
-      entry.platforms[row.platform] = (entry.platforms[row.platform] || 0) + row.clicks
-      entry.total += row.clicks
+      entry.channels[link.channel] = (entry.channels[link.channel] || 0) + link.click_count
+      entry.total += link.click_count
+      // Track the newest tracked-link created_at for this event
+      if (link.created_at && link.created_at > entry.created_at) {
+        entry.created_at = link.created_at
+      }
     })
 
     let items = Array.from(map.values())
 
-    if (filterType !== 'all') {
-      items = items.filter((item) => item.item_type === filterType)
-    }
-    if (filterPlatform !== 'all') {
-      items = items.filter((item) => item.platforms[filterPlatform])
+    if (filterChannel !== 'ALL') {
+      items = items.filter((item) => item.channels[filterChannel])
     }
 
-    // Sort by selected option
-    const num = (id: string) => (id.match(/^\d+$/) ? parseInt(id, 10) : 0)
     switch (sortBy) {
       case 'total_asc':
         items.sort((a, b) => a.total - b.total)
         break
-      case 'item_id_asc':
-        items.sort((a, b) => {
-          const na = num(a.item_id)
-          const nb = num(b.item_id)
-          if (na !== nb) return na - nb
-          return a.item_id.localeCompare(b.item_id)
-        })
+      case 'name_asc':
+        items.sort((a, b) => a.event_name.localeCompare(b.event_name))
         break
-      case 'item_id_desc':
-        items.sort((a, b) => {
-          const na = num(a.item_id)
-          const nb = num(b.item_id)
-          if (na !== nb) return nb - na
-          return b.item_id.localeCompare(a.item_id)
-        })
+      case 'name_desc':
+        items.sort((a, b) => b.event_name.localeCompare(a.event_name))
         break
       case 'created_asc':
         items.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
@@ -187,19 +110,11 @@ export default function LinkTrackingPage() {
         items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
         break
       default:
-        // total_desc
         items.sort((a, b) => b.total - a.total)
     }
 
     return items
-  }, [clicksByItem, filterType, filterPlatform, sortBy, linkCreatedAtByItem])
-
-  // All platforms present in the data
-  const allPlatforms = useMemo(() => {
-    const set = new Set<string>()
-    clicksByItem.forEach((row) => set.add(row.platform))
-    return Array.from(set).sort()
-  }, [clicksByItem])
+  }, [trackedLinks, filterChannel, sortBy])
 
   if (loading) {
     return (
@@ -215,11 +130,10 @@ export default function LinkTrackingPage() {
   return (
     <Layout>
       <div className="px-4 sm:px-0">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Link Tracking</h1>
           <p className="text-gray-600">
-            See where your users come from — click analytics for events, hackathons, and scholarships across all platforms.
+            See where your users come from — click analytics for events across all channels.
           </p>
         </div>
 
@@ -241,70 +155,32 @@ export default function LinkTrackingPage() {
           </div>
         )}
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          {/* Total Clicks Card */}
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5 mb-8">
           <div className="rounded-2xl bg-white p-6 shadow-sm border-2 border-gray-100">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Clicks</p>
-                <p className="text-4xl font-bold text-gray-900">{totalClicks}</p>
-                <p className="text-sm text-gray-500 mt-2">All time</p>
-              </div>
-              <div className="p-4 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 text-white shadow-lg">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                </svg>
-              </div>
-            </div>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Clicks</p>
+            <p className="text-4xl font-bold text-gray-900">{totalClicks}</p>
+            <p className="text-sm text-gray-500 mt-2">All time</p>
           </div>
 
-          {/* Per-Platform Cards */}
-          {platformTotals.map(({ platform, clicks }) => {
-            const config = PLATFORM_CONFIG[platform] || { label: platform, color: 'text-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' }
+          {channelTotals.map(({ channel, clicks }) => {
+            const config = CHANNEL_CONFIG[channel as Channel] || { label: channel, color: 'text-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' }
             return (
-              <div key={platform} className={`rounded-2xl p-6 shadow-sm border-2 ${config.bgColor} ${config.borderColor}`}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{config.label}</p>
-                    <p className={`text-4xl font-bold ${config.color}`}>{clicks}</p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      {totalClicks > 0 ? `${Math.round((clicks / totalClicks) * 100)}% of total` : 'No clicks yet'}
-                    </p>
-                  </div>
-                </div>
+              <div key={channel} className={`rounded-2xl p-6 shadow-sm border-2 ${config.bgColor} ${config.borderColor}`}>
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{config.label}</p>
+                <p className={`text-4xl font-bold ${config.color}`}>{clicks}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  {totalClicks > 0 ? `${Math.round((clicks / totalClicks) * 100)}% of total` : 'No clicks yet'}
+                </p>
               </div>
             )
           })}
         </div>
 
-        {/* Clicks by Item Type */}
-        {typeTotals.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">By Category</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {typeTotals.map(({ item_type, clicks }) => {
-                const config = ITEM_TYPE_CONFIG[item_type] || { label: item_type, pluralLabel: item_type, gradient: 'from-gray-500 to-gray-600' }
-                return (
-                  <div key={item_type} className="rounded-xl bg-white p-5 shadow-sm border border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${config.gradient}`} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">{config.pluralLabel}</p>
-                        <p className="text-2xl font-bold text-gray-900">{clicks} clicks</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Detailed Table */}
+        {/* Per-event table */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Per-Item Breakdown</h2>
+            <h2 className="text-xl font-bold text-gray-900">Per-Event Breakdown</h2>
             <div className="flex flex-wrap items-center gap-3">
               <label className="text-sm text-gray-600 font-medium">Sort by:</label>
               <select
@@ -316,38 +192,28 @@ export default function LinkTrackingPage() {
                 <option value="total_asc">Total clicks (low first)</option>
                 <option value="created_desc">Newest links first</option>
                 <option value="created_asc">Oldest links first</option>
-                <option value="item_id_desc">Item ID (high first)</option>
-                <option value="item_id_asc">Item ID (low first)</option>
+                <option value="name_asc">Name (A-Z)</option>
+                <option value="name_desc">Name (Z-A)</option>
               </select>
               <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                value={filterChannel}
+                onChange={(e) => setFilterChannel(e.target.value as Channel | 'ALL')}
                 className="block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
               >
-                <option value="all">All types</option>
-                {Object.entries(ITEM_TYPE_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>{config.pluralLabel}</option>
-                ))}
-              </select>
-              <select
-                value={filterPlatform}
-                onChange={(e) => setFilterPlatform(e.target.value)}
-                className="block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="all">All platforms</option>
-                {allPlatforms.map((p) => (
-                  <option key={p} value={p}>{PLATFORM_CONFIG[p]?.label || p}</option>
+                <option value="ALL">All channels</option>
+                {ALL_CHANNELS.map((c) => (
+                  <option key={c} value={c}>{CHANNEL_CONFIG[c].label}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {groupedItems.length === 0 ? (
+          {groupedByEvent.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <p className="mt-4 text-gray-500">No click data yet. Clicks will appear here once users start clicking tracked links.</p>
+              <p className="mt-4 text-gray-500">No tracked links yet.</p>
             </div>
           ) : (
             <div className="overflow-hidden shadow-sm ring-1 ring-gray-200 rounded-xl bg-white">
@@ -355,79 +221,90 @@ export default function LinkTrackingPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Type</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Item</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Destination</th>
-                      {allPlatforms.map((p) => (
-                        <th key={p} className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                          {PLATFORM_CONFIG[p]?.label || p}
+                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Event</th>
+                      {ALL_CHANNELS.map((c) => (
+                        <th key={c} className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+                          {CHANNEL_CONFIG[c].label}
                         </th>
                       ))}
                       <th className="px-3 py-3.5 pr-6 text-center text-sm font-semibold text-gray-900">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {groupedItems.map((item) => {
-                      const typeConfig = ITEM_TYPE_CONFIG[item.item_type] || { label: item.item_type, gradient: 'from-gray-500 to-gray-600' }
+                    {groupedByEvent.map((item) => (
+                      <tr key={item.event_id} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-4 pl-6 pr-3 text-sm">
+                          <div>
+                            <p className="font-semibold text-gray-900 truncate max-w-[300px]" title={item.event_name}>
+                              {item.event_name}
+                            </p>
+                            <p className="text-xs text-gray-400 font-mono mt-0.5">ID: {item.event_id.slice(0, 8)}…</p>
+                          </div>
+                        </td>
+                        {ALL_CHANNELS.map((c) => {
+                          const clicks = item.channels[c] || 0
+                          const config = CHANNEL_CONFIG[c]
+                          return (
+                            <td key={c} className="px-3 py-4 text-sm text-center">
+                              {clicks > 0 ? (
+                                <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-semibold ${config.bgColor} ${config.color}`}>
+                                  {clicks}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300">-</span>
+                              )}
+                            </td>
+                          )
+                        })}
+                        <td className="px-3 py-4 pr-6 text-sm text-center">
+                          <span className="inline-flex items-center justify-center min-w-[2rem] px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-900 text-white">
+                            {item.total}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Raw tracked links list */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">All Tracked Links</h2>
+          {trackedLinks.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+              <p className="text-gray-500">No tracked links yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden shadow-sm ring-1 ring-gray-200 rounded-xl bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Event</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Channel</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Slug</th>
+                      <th className="px-3 py-3.5 pr-6 text-center text-sm font-semibold text-gray-900">Clicks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {trackedLinks.map((link) => {
+                      const config = CHANNEL_CONFIG[link.channel as Channel]
                       return (
-                        <tr key={`${item.item_type}-${item.item_id}`} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-4 pl-6 pr-3 text-sm">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${typeConfig.gradient} text-white`}>
-                              {typeConfig.label}
-                            </span>
+                        <tr key={link.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="py-4 pl-6 pr-3 text-sm font-medium text-gray-900 truncate max-w-[300px]">
+                            {link.event_name || `Event ${link.event_id.slice(0, 8)}…`}
                           </td>
                           <td className="px-3 py-4 text-sm">
-                            {(() => {
-                              const nameKey = `${item.item_type}-${item.item_id}`
-                              const name = itemNames[nameKey]
-                              return (
-                                <div>
-                                  <p className="font-semibold text-gray-900 truncate max-w-[200px]" title={name || `Unknown (${item.item_id})`}>
-                                    {name || `Unknown (${item.item_id})`}
-                                  </p>
-                                  <p className="text-xs text-gray-400 font-mono mt-0.5">ID: {item.item_id}</p>
-                                </div>
-                              )
-                            })()}
-                          </td>
-                          <td className="px-3 py-4 text-sm">
-                            <a
-                              href={item.destination_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary-600 hover:text-primary-800 font-medium inline-flex items-center gap-1 max-w-xs truncate"
-                              title={item.destination_url}
-                            >
-                              {(() => {
-                                try {
-                                  return new URL(item.destination_url).hostname
-                                } catch {
-                                  return item.destination_url
-                                }
-                              })()}
-                              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </a>
-                          </td>
-                          {allPlatforms.map((p) => {
-                            const clicks = item.platforms[p] || 0
-                            return (
-                              <td key={p} className="px-3 py-4 text-sm text-center">
-                                {clicks > 0 ? (
-                                  <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-semibold ${PLATFORM_CONFIG[p]?.bgColor || 'bg-gray-100'} ${PLATFORM_CONFIG[p]?.color || 'text-gray-800'}`}>
-                                    {clicks}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-300">-</span>
-                                )}
-                              </td>
-                            )
-                          })}
-                          <td className="px-3 py-4 pr-6 text-sm text-center">
-                            <span className="inline-flex items-center justify-center min-w-[2rem] px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-900 text-white">
-                              {item.total}
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config?.bgColor || 'bg-gray-100'} ${config?.color || 'text-gray-800'}`}>
+                              {config?.label || link.channel}
                             </span>
+                          </td>
+                          <td className="px-3 py-4 text-sm font-mono text-gray-700">{link.slug}</td>
+                          <td className="px-3 py-4 pr-6 text-sm text-center font-semibold text-gray-900">
+                            {link.click_count}
                           </td>
                         </tr>
                       )

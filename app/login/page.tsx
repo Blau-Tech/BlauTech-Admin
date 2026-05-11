@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -11,13 +11,15 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, loading: authLoading } = useAuth()
 
-  // Redirect if already logged in as admin
-  if (user && isAdmin) {
-    router.push('/dashboard')
-    return null
-  }
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      router.push('/dashboard')
+    }
+  }, [user, isAdmin, authLoading, router])
+
+  if (authLoading || (user && isAdmin)) return null
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

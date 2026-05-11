@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import Calendar from '@/components/Calendar'
-import { dashboardStats, eventsApi, hackathonsApi, scholarshipsApi } from '@/lib/api'
+import {
+  dashboardStats,
+  eventsApi,
+  hackathonsApi,
+  scholarshipsApi,
+} from '@/lib/api'
 
-// SVG Icons
 const CalendarIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -19,7 +23,6 @@ const CodeIcon = () => (
   </svg>
 )
 
-
 const GraduationIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
@@ -28,9 +31,15 @@ const GraduationIcon = () => (
   </svg>
 )
 
-const UsersIcon = () => (
+const SparklesIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+  </svg>
+)
+
+const BuildingIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0v-3m-7-3h2m-2 3h2m-4-3h2m-2 3h2M9 7h2m-2 3h2m-2 3h2" />
   </svg>
 )
 
@@ -39,9 +48,6 @@ interface StatCard {
   href: string
   icon: React.ReactNode
   gradient: string
-  bgColor: string
-  textColor: string
-  borderColor: string
 }
 
 export default function Dashboard() {
@@ -49,7 +55,8 @@ export default function Dashboard() {
     events: 0,
     hackathons: 0,
     scholarships: 0,
-    signups: 0,
+    opportunities: 0,
+    organisations: 0,
   })
   const [calendarEvents, setCalendarEvents] = useState<any[]>([])
   const [calendarHackathons, setCalendarHackathons] = useState<any[]>([])
@@ -65,13 +72,14 @@ export default function Dashboard() {
   const loadStats = async () => {
     try {
       setLoading(true)
-      const [events, hackathons, scholarships, signups] = await Promise.all([
+      const [events, hackathons, scholarships, opportunities, organisations] = await Promise.all([
         dashboardStats.getEventsCount(),
         dashboardStats.getHackathonsCount(),
         dashboardStats.getScholarshipsCount(),
-        dashboardStats.getSignupsCount(),
+        dashboardStats.getOpportunitiesCount(),
+        dashboardStats.getOrganisationsCount(),
       ])
-      setStats({ events, hackathons, scholarships, signups })
+      setStats({ events, hackathons, scholarships, opportunities, organisations })
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
@@ -87,11 +95,15 @@ export default function Dashboard() {
         hackathonsApi.fetch(),
         scholarshipsApi.fetch(),
       ])
-      
-      // Filter only items with start_date
+
       setCalendarEvents(events.filter((e: any) => e.start_date))
       setCalendarHackathons(hackathons.filter((h: any) => h.start_date))
-      setCalendarScholarships(scholarships.filter((s: any) => s.start_date))
+      // Scholarships only have `deadline` in the new schema — show that on the calendar.
+      setCalendarScholarships(
+        scholarships
+          .filter((s: any) => s.deadline)
+          .map((s: any) => ({ ...s, start_date: s.deadline }))
+      )
     } catch (error) {
       console.error('Error loading calendar data:', error)
     } finally {
@@ -105,36 +117,30 @@ export default function Dashboard() {
       href: '/dashboard/events',
       icon: <CalendarIcon />,
       gradient: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-600',
-      borderColor: 'border-blue-200',
     },
     {
       name: 'Hackathons',
       href: '/dashboard/hackathons',
       icon: <CodeIcon />,
       gradient: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
-      borderColor: 'border-green-200',
     },
     {
       name: 'Scholarships',
       href: '/dashboard/scholarships',
       icon: <GraduationIcon />,
       gradient: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600',
-      borderColor: 'border-purple-200',
     },
     {
-      name: 'Signups',
-      href: '/dashboard/signups',
-      icon: <UsersIcon />,
+      name: 'Opportunities',
+      href: '/dashboard/opportunities',
+      icon: <SparklesIcon />,
+      gradient: 'from-pink-500 to-pink-600',
+    },
+    {
+      name: 'Organisations',
+      href: '/dashboard/organisations',
+      icon: <BuildingIcon />,
       gradient: 'from-amber-500 to-amber-600',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      borderColor: 'border-amber-200',
     },
   ]
 
@@ -146,8 +152,10 @@ export default function Dashboard() {
         return stats.hackathons
       case 'Scholarships':
         return stats.scholarships
-      case 'Signups':
-        return stats.signups
+      case 'Opportunities':
+        return stats.opportunities
+      case 'Organisations':
+        return stats.organisations
       default:
         return 0
     }
@@ -156,17 +164,15 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="px-4 sm:px-0">
-        {/* Header Section */}
         <div className="mb-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Welcome to BlauTech Admin
           </h1>
           <p className="text-lg text-gray-600">
-            Manage your events, hackathons, scholarships, and more
+            Manage your events, hackathons, scholarships, opportunities and organisations
           </p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
           {statCards.map((card) => {
             const count = getCount(card.name)
@@ -184,13 +190,9 @@ export default function Dashboard() {
                     {loading ? (
                       <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
                     ) : (
-                      <p className="text-4xl font-bold text-gray-900 mb-1">
-                        {count}
-                      </p>
+                      <p className="text-4xl font-bold text-gray-900 mb-1">{count}</p>
                     )}
-                    <p className="text-sm text-gray-500 mt-2">
-                      {card.name === 'Signups' ? 'Total registrations' : 'Active items'}
-                    </p>
+                    <p className="text-sm text-gray-500 mt-2">Active items</p>
                   </div>
                   <div className={`p-4 rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     {card.icon}
@@ -207,7 +209,6 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Calendar Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Events Calendar</h2>
           {calendarLoading ? (
