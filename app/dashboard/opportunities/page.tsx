@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import OpportunityForm from '@/components/OpportunityForm'
+import GlassCard from '@/components/ui/GlassCard'
+import Badge from '@/components/ui/Badge'
 import { opportunitiesApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { format } from 'date-fns'
@@ -218,20 +220,20 @@ export default function OpportunitiesPage() {
         </div>
 
         {filteredOpportunities.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <GlassCard className="text-center py-12">
             <p className="text-gray-500">
               {opportunities.length === 0 ? 'No opportunities yet' : 'No opportunities match your search criteria'}
             </p>
-          </div>
+          </GlassCard>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {filteredOpportunities.map((opp) => (
-              <div
+              <GlassCard
                 key={opp.id}
-                className={`group relative rounded-xl shadow-sm border-2 transition-all duration-300 overflow-hidden ${
+                className={`group relative transition-all duration-300 overflow-hidden border hover:-translate-y-1 ${
                   opp.is_highlight
-                    ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-xl'
-                    : 'bg-white border-gray-200 hover:shadow-lg hover:border-primary-300'
+                    ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-yellow-200/30 shadow-lg'
+                    : 'hover:shadow-xl hover:bg-white/70'
                 }`}
               >
                 <div className="px-6 pt-6 pb-4">
@@ -242,14 +244,12 @@ export default function OpportunitiesPage() {
                         <p className="text-sm text-gray-500 mb-2">by {opp.organisation}</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-pink-100 text-pink-800">
-                          {TYPE_LABELS[opp.opportunity_type]}
-                        </span>
+                        <Badge color="pink" size="sm">{TYPE_LABELS[opp.opportunity_type]}</Badge>
                         {Array.isArray(opp.cities) && opp.cities.map((c) => (
-                          <span key={c} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">{c}</span>
+                          <Badge key={c} color="gray" size="sm">{c}</Badge>
                         ))}
                         {opp.is_highlight && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Highlight</span>
+                          <Badge color="yellow" size="sm">⭐ Highlight</Badge>
                         )}
                       </div>
                     </div>
@@ -260,7 +260,7 @@ export default function OpportunitiesPage() {
                   )}
                 </div>
 
-                <div className="px-6 pb-4 space-y-3 border-t border-gray-100 pt-4">
+                <div className="px-6 pb-4 space-y-3 border-t border-white/40 pt-4">
                   {opp.deadline && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,7 +292,7 @@ export default function OpportunitiesPage() {
                     </div>
                   )}
 
-                  <div className="flex justify-end space-x-4 pt-2 border-t border-gray-100">
+                  <div className="flex justify-end space-x-4 pt-2 border-t border-white/40">
                     <button
                       onClick={() => handleEdit(opp)}
                       className="text-primary-600 hover:text-primary-800 text-sm font-medium"
@@ -307,7 +307,7 @@ export default function OpportunitiesPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </GlassCard>
             ))}
           </div>
         )}
