@@ -5,11 +5,20 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import ScholarshipForm from '@/components/ScholarshipForm'
 import { scholarshipsApi } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
+import GlassCard from '@/components/ui/GlassCard'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ErrorBanner from '@/components/ui/ErrorBanner'
+import SuccessBanner from '@/components/ui/SuccessBanner'
+import SearchBar from '@/components/ui/SearchBar'
+import Badge from '@/components/ui/Badge'
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
 export default function ScholarshipsPage() {
+  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [scholarships, setScholarships] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -25,13 +34,14 @@ export default function ScholarshipsPage() {
   const [webhookLoading, setWebhookLoading] = useState(false)
 
   useEffect(() => {
+    if (authLoading) return
     loadScholarships()
-  }, [])
+  }, [authLoading, cityFilter])
 
   const loadScholarships = async () => {
     try {
       setLoading(true)
-      const data = await scholarshipsApi.fetch()
+      const data = await scholarshipsApi.fetch(cityFilter)
       setScholarships(data)
     } catch (err: any) {
       setError(err.message)
@@ -207,7 +217,7 @@ export default function ScholarshipsPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="text-center py-12">Loading...</div>
+        <LoadingSpinner label="Loading scholarships..." />
       </Layout>
     )
   }
@@ -215,34 +225,8 @@ export default function ScholarshipsPage() {
   return (
     <Layout>
       <div className="px-4 sm:px-6 lg:px-8">
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700"><p>{error}</p></div>
-              </div>
-              <div className="ml-auto pl-3">
-                <button onClick={() => setError('')} className="inline-flex text-red-400 hover:text-red-600">
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
-            <p className="text-sm font-medium text-green-800">{successMessage}</p>
-          </div>
-        )}
+        {error && <ErrorBanner message={error} onClose={() => setError('')} className="mb-4" />}
+        {successMessage && <SuccessBanner message={successMessage} className="mb-4" />}
 
         <div className="sm:flex sm:items-center mb-6">
           <div className="sm:flex-auto">
@@ -254,12 +238,12 @@ export default function ScholarshipsPage() {
             )}
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-1 glass-subtle rounded-2xl p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('card')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'card' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                  viewMode === 'card' ? 'bg-white/70 text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-white/40'
                 }`}
                 title="Card View"
               >
@@ -270,8 +254,8 @@ export default function ScholarshipsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                  viewMode === 'table' ? 'bg-white/70 text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-white/40'
                 }`}
                 title="Table View"
               >
@@ -282,8 +266,8 @@ export default function ScholarshipsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('chronological')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'chronological' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                  viewMode === 'chronological' ? 'bg-white/70 text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-white/40'
                 }`}
                 title="Chronological View (by deadline)"
               >
@@ -295,63 +279,60 @@ export default function ScholarshipsPage() {
             <button
               type="button"
               onClick={handleAdd}
-              className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
+              className="block rounded-xl bg-primary-600/90 backdrop-blur-sm px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-all"
             >
               Add Scholarship
             </button>
           </div>
         </div>
 
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search scholarships by title, description, or organisation..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-          />
-        </div>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search scholarships by title, description, or organisation..."
+          className="mb-6"
+        />
 
         {/* n8n webhook input */}
         <div className="mb-8 flex justify-center">
-          <div className="w-full max-w-2xl">
+          <GlassCard variant="subtle" className="w-full max-w-2xl p-4">
             <form onSubmit={handleWebhookSubmit} className="flex items-center gap-3">
               <input
                 type="url"
                 placeholder="Enter scholarship link URL..."
                 value={scholarshipLink}
                 onChange={(e) => setScholarshipLink(e.target.value)}
-                className="flex-1 text-base px-4 py-3 border-2 border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm"
+                className="flex-1 text-base px-4 py-3 glass-input rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500 transition-all"
                 disabled={webhookLoading}
               />
               <button
                 type="submit"
                 disabled={!scholarshipLink.trim() || !webhookUrl || webhookLoading}
-                className="px-6 py-3 text-base font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="px-6 py-3 text-base font-semibold text-white bg-primary-600/90 backdrop-blur-sm rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 {webhookLoading ? 'Sending...' : 'Send'}
               </button>
             </form>
-          </div>
+          </GlassCard>
         </div>
 
         {/* Display */}
         {filteredScholarships.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <GlassCard className="text-center py-12">
             <p className="text-gray-500">
               {scholarships.length === 0 ? 'No scholarships available' : 'No scholarships match your search criteria'}
             </p>
-          </div>
+          </GlassCard>
         ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {filteredScholarships.map((s) => (
               <div
                 key={s.id}
                 onClick={() => handleViewDetails(s)}
-                className={`group relative rounded-xl shadow-sm border-2 transition-all duration-300 overflow-hidden cursor-pointer ${
+                className={`group relative rounded-3xl backdrop-blur-xl transition-all duration-300 overflow-hidden cursor-pointer border hover:-translate-y-1 ${
                   s.is_highlight
-                    ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-xl ring-2 ring-yellow-200 ring-opacity-50'
-                    : 'bg-white border-gray-200 hover:shadow-lg hover:border-primary-300'
+                    ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-yellow-200/30 shadow-lg'
+                    : 'glass hover:shadow-xl hover:bg-white/70'
                 }`}
               >
                 <div className="px-6 pt-6 pb-4">
@@ -362,11 +343,9 @@ export default function ScholarshipsPage() {
                         <p className="text-sm text-gray-500 mb-2">by {s.organisation}</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
-                        {s.is_highlight && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Highlight</span>
-                        )}
+                        {s.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                         {Array.isArray(s.cities) && s.cities.map((c: string) => (
-                          <span key={c} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">{c}</span>
+                          <Badge key={c} color="gray" size="sm">{c}</Badge>
                         ))}
                       </div>
                     </div>
@@ -377,7 +356,7 @@ export default function ScholarshipsPage() {
                   )}
                 </div>
 
-                <div className="px-6 pb-4 space-y-3 border-t border-gray-100 pt-4">
+                <div className="px-6 pb-4 space-y-3 border-t border-white/40 pt-4">
                   {s.deadline && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -399,7 +378,7 @@ export default function ScholarshipsPage() {
                   {Array.isArray(s.fields_of_study) && s.fields_of_study.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {s.fields_of_study.map((f: string) => (
-                        <span key={f} className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{f}</span>
+                        <Badge key={f} color="blue" size="sm">{f}</Badge>
                       ))}
                     </div>
                   )}
@@ -426,9 +405,9 @@ export default function ScholarshipsPage() {
           <div className="mt-8 flow-root">
             <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                <div className="overflow-hidden shadow-sm ring-1 ring-gray-200 rounded-xl bg-white">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <div className="glass overflow-hidden rounded-3xl">
+                  <table className="min-w-full divide-y divide-white/40">
+                    <thead className="bg-white/30 backdrop-blur-sm">
                       <tr>
                         {tableColumns.map((column) => (
                           <th key={column.key} scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
@@ -440,9 +419,9 @@ export default function ScholarshipsPage() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-white/40">
                       {filteredScholarships.map((s) => (
-                        <tr key={s.id} className={`transition-colors ${s.is_highlight ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-gray-50'}`}>
+                        <tr key={s.id} className={`transition-colors ${s.is_highlight ? 'bg-yellow-100/40 hover:bg-yellow-100/60' : 'hover:bg-white/40'}`}>
                           {tableColumns.map((column) => (
                             <td key={column.key} className={`py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6 ${column.key === 'title' ? '' : 'whitespace-nowrap'}`}>
                               {column.render ? column.render(s[column.key], s) : s[column.key]?.toString() || '-'}
@@ -466,14 +445,14 @@ export default function ScholarshipsPage() {
         ) : (
           /* Chronological view — grouped by deadline */
           <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary-300/60 via-white/40 to-primary-300/60"></div>
             <div className="space-y-8">
               {scholarshipsByDate.map(({ date, scholarships: dateScholarships }) => (
                 <div key={date.toISOString()} className="relative flex gap-6">
                   <div className="flex-shrink-0 w-16 text-right pt-1">
                     <div className="sticky top-4">
                       <div className="relative">
-                        <div className="absolute -left-8 top-2 w-4 h-4 bg-white border-2 border-primary-500 rounded-full"></div>
+                        <div className="absolute -left-8 top-2 w-4 h-4 bg-white/80 backdrop-blur-sm border-2 border-primary-500 rounded-full shadow-md"></div>
                         <div className="text-sm font-semibold text-gray-900">{formatDateLabel(date)}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{formatDayOfWeek(date)}</div>
                       </div>
@@ -484,10 +463,10 @@ export default function ScholarshipsPage() {
                       <div
                         key={s.id}
                         onClick={() => handleViewDetails(s)}
-                        className={`group rounded-xl shadow-sm border transition-all duration-200 overflow-hidden cursor-pointer ${
+                        className={`group rounded-3xl backdrop-blur-xl border transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5 ${
                           s.is_highlight
-                            ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-lg ring-2 ring-yellow-200 ring-opacity-50'
-                            : 'bg-white border-gray-200 hover:shadow-md hover:border-primary-300'
+                            ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-md shadow-yellow-200/30'
+                            : 'glass hover:shadow-lg hover:bg-white/70'
                         }`}
                       >
                         <div className="p-6">
@@ -525,11 +504,9 @@ export default function ScholarshipsPage() {
                 <p className="text-sm text-gray-500 mt-1">by {viewingScholarship.organisation}</p>
               )}
               <div className="flex items-center gap-2 flex-wrap mt-2">
-                {viewingScholarship.is_highlight && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Highlight</span>
-                )}
+                {viewingScholarship.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                 {Array.isArray(viewingScholarship.cities) && viewingScholarship.cities.map((c: string) => (
-                  <span key={c} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">{c}</span>
+                  <Badge key={c} color="gray" size="sm">{c}</Badge>
                 ))}
               </div>
             </div>
@@ -581,27 +558,21 @@ export default function ScholarshipsPage() {
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Published On</h3>
                 <div className="flex flex-wrap gap-2">
-                  {viewingScholarship.posted_linkedin && (
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">LinkedIn</span>
-                  )}
-                  {viewingScholarship.posted_whatsapp && (
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">WhatsApp</span>
-                  )}
-                  {viewingScholarship.posted_newsletter && (
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">Newsletter</span>
-                  )}
+                  {viewingScholarship.posted_linkedin && <Badge color="blue" size="sm">LinkedIn</Badge>}
+                  {viewingScholarship.posted_whatsapp && <Badge color="green" size="sm">WhatsApp</Badge>}
+                  {viewingScholarship.posted_newsletter && <Badge color="purple" size="sm">Newsletter</Badge>}
                 </div>
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/40">
               <button
                 onClick={() => {
                   setIsDetailModalOpen(false)
                   setEditingScholarship(viewingScholarship)
                   setIsModalOpen(true)
                 }}
-                className="px-4 py-2 text-sm font-semibold text-primary-600 border border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-primary-600 border border-primary-300/60 backdrop-blur-sm rounded-xl hover:bg-primary-50/60 transition-all"
               >
                 Edit
               </button>
@@ -610,7 +581,7 @@ export default function ScholarshipsPage() {
                   setIsDetailModalOpen(false)
                   handleDelete(viewingScholarship)
                 }}
-                className="px-4 py-2 text-sm font-semibold text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-red-600 border border-red-300/60 backdrop-blur-sm rounded-xl hover:bg-red-50/60 transition-all"
               >
                 Delete
               </button>

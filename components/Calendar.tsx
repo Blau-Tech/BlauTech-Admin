@@ -90,7 +90,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="glass rounded-3xl p-6">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
           </h2>
           <button
             onClick={goToToday}
-            className="px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-100/70 backdrop-blur-sm rounded-xl hover:bg-primary-100 transition-colors"
           >
             Today
           </button>
@@ -107,7 +107,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
         <div className="flex items-center gap-2">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-xl transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -115,7 +115,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
           </button>
           <button
             onClick={goToNextMonth}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-xl transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -125,7 +125,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200">
+      <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/40">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-blue-500"></div>
           <span className="text-sm text-gray-600">Events</span>
@@ -158,9 +158,11 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
           return (
             <div
               key={idx}
-              className={`min-h-[80px] p-1 border border-gray-100 rounded-lg ${
-                isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-              } ${isToday ? 'ring-2 ring-primary-500' : ''}`}
+              className={`min-h-[80px] p-1 border rounded-xl backdrop-blur-sm transition-colors ${
+                isCurrentMonth
+                  ? 'bg-white/40 border-white/40'
+                  : 'bg-white/15 border-white/20'
+              } ${isToday ? 'ring-2 ring-primary-500/60' : ''}`}
             >
               <div className={`text-sm font-medium mb-1 ${
                 isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
@@ -193,7 +195,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
 
       {/* Upcoming Items List */}
       {allItems.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-white/40">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {allItems
@@ -206,7 +208,7 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
               .map((item) => (
                 <div
                   key={`${item.type}-${item.id}`}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/50 transition-colors"
                 >
                   <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${getTypeColor(item.type)}`}></div>
                   <div className="flex-1 min-w-0">

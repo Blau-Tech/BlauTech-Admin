@@ -1,17 +1,37 @@
 import { supabase } from './supabase'
 
+// Tables where city is a single text column (vs. an array)
+const SINGLE_CITY_TABLES = new Set(['events', 'organisations'])
+// Tables where the city is stored as an array column called `cities`
+const MULTI_CITY_TABLES = new Set(['scholarships', 'opportunities'])
+
+function applyCityFilter(query: any, tableName: string, cityFilter?: string) {
+  if (!cityFilter) return query
+  if (SINGLE_CITY_TABLES.has(tableName)) {
+    return query.eq('city', cityFilter)
+  }
+  if (MULTI_CITY_TABLES.has(tableName)) {
+    return query.contains('cities', [cityFilter])
+  }
+  return query
+}
+
 // Generic CRUD operations
-export async function fetchTable(tableName: string) {
+export async function fetchTable(tableName: string, cityFilter?: string) {
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
     throw new Error('Not authenticated. Please log in again.')
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from(tableName)
     .select('*')
     .order('created_at', { ascending: false })
+
+  query = applyCityFilter(query, tableName, cityFilter)
+
+  const { data, error } = await query
 
   if (error) {
     console.error(`Error fetching ${tableName}:`, error)
@@ -105,15 +125,21 @@ export async function deleteRecord(tableName: string, id: string | number) {
 }
 
 // Events (event_type = 'EVENT') -----------------------------------------------
-async function fetchEventsFiltered(eventType: 'EVENT' | 'HACKATHON') {
+async function fetchEventsFiltered(eventType: 'EVENT' | 'HACKATHON', cityFilter?: string) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Not authenticated. Please log in again.')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('events')
     .select('*')
     .eq('event_type', eventType)
     .order('created_at', { ascending: false })
+
+  if (cityFilter) {
+    query = query.eq('city', cityFilter)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error(`Error fetching events (${eventType}):`, error)
@@ -125,14 +151,20 @@ async function fetchEventsFiltered(eventType: 'EVENT' | 'HACKATHON') {
   return data || []
 }
 
-async function countEventsFiltered(eventType: 'EVENT' | 'HACKATHON'): Promise<number> {
+async function countEventsFiltered(eventType: 'EVENT' | 'HACKATHON', cityFilter?: string): Promise<number> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return 0
 
-  const { count, error } = await supabase
+  let query = supabase
     .from('events')
     .select('*', { count: 'exact', head: true })
     .eq('event_type', eventType)
+
+  if (cityFilter) {
+    query = query.eq('city', cityFilter)
+  }
+
+  const { count, error } = await query
 
   if (error) {
     console.error(`Error counting events (${eventType}):`, error)
@@ -142,14 +174,14 @@ async function countEventsFiltered(eventType: 'EVENT' | 'HACKATHON'): Promise<nu
 }
 
 export const eventsApi = {
-  fetch: () => fetchEventsFiltered('EVENT'),
+  fetch: (cityFilter?: string) => fetchEventsFiltered('EVENT', cityFilter),
   create: (event: any) => createRecord('events', { ...event, event_type: 'EVENT' }),
   update: (id: string, updates: any) => updateRecord('events', id, updates),
   delete: (id: string) => deleteRecord('events', id),
 }
 
 export const hackathonsApi = {
-  fetch: () => fetchEventsFiltered('HACKATHON'),
+  fetch: (cityFilter?: string) => fetchEventsFiltered('HACKATHON', cityFilter),
   create: (hackathon: any) => createRecord('events', { ...hackathon, event_type: 'HACKATHON' }),
   update: (id: string, updates: any) => updateRecord('events', id, updates),
   delete: (id: string) => deleteRecord('events', id),
@@ -157,7 +189,7 @@ export const hackathonsApi = {
 
 // Scholarships (flat schema) --------------------------------------------------
 export const scholarshipsApi = {
-  fetch: () => fetchTable('scholarships'),
+  fetch: (cityFilter?: string) => fetchTable('scholarships', cityFilter),
   create: (scholarship: any) => createRecord('scholarships', scholarship),
   update: (id: string, updates: any) => updateRecord('scholarships', id, updates),
   delete: (id: string) => deleteRecord('scholarships', id),
@@ -165,7 +197,7 @@ export const scholarshipsApi = {
 
 // Organisations (replaces student_clubs) --------------------------------------
 export const organisationsApi = {
-  fetch: () => fetchTable('organisations'),
+  fetch: (cityFilter?: string) => fetchTable('organisations', cityFilter),
   create: (org: any) => createRecord('organisations', org),
   update: (id: string, updates: any) => updateRecord('organisations', id, updates),
   delete: (id: string) => deleteRecord('organisations', id),
@@ -173,14 +205,14 @@ export const organisationsApi = {
 
 // Opportunities (new) ---------------------------------------------------------
 export const opportunitiesApi = {
-  fetch: () => fetchTable('opportunities'),
+  fetch: (cityFilter?: string) => fetchTable('opportunities', cityFilter),
   create: (opp: any) => createRecord('opportunities', opp),
   update: (id: string, updates: any) => updateRecord('opportunities', id, updates),
   delete: (id: string) => deleteRecord('opportunities', id),
 }
 
 // Dashboard counts ------------------------------------------------------------
-export async function getTableCount(tableName: string): Promise<number> {
+export async function getTableCount(tableName: string, cityFilter?: string): Promise<number> {
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
@@ -188,9 +220,13 @@ export async function getTableCount(tableName: string): Promise<number> {
     return 0
   }
 
-  const { count, error } = await supabase
+  let query = supabase
     .from(tableName)
     .select('*', { count: 'exact', head: true })
+
+  query = applyCityFilter(query, tableName, cityFilter)
+
+  const { count, error } = await query
 
   if (error) {
     console.error(`Error counting ${tableName}:`, error)
@@ -201,41 +237,47 @@ export async function getTableCount(tableName: string): Promise<number> {
 }
 
 export const dashboardStats = {
-  getEventsCount: () => countEventsFiltered('EVENT'),
-  getHackathonsCount: () => countEventsFiltered('HACKATHON'),
-  getScholarshipsCount: () => getTableCount('scholarships'),
-  getOpportunitiesCount: () => getTableCount('opportunities'),
-  getOrganisationsCount: () => getTableCount('organisations'),
+  getEventsCount: (cityFilter?: string) => countEventsFiltered('EVENT', cityFilter),
+  getHackathonsCount: (cityFilter?: string) => countEventsFiltered('HACKATHON', cityFilter),
+  getScholarshipsCount: (cityFilter?: string) => getTableCount('scholarships', cityFilter),
+  getOpportunitiesCount: (cityFilter?: string) => getTableCount('opportunities', cityFilter),
+  getOrganisationsCount: (cityFilter?: string) => getTableCount('organisations', cityFilter),
 }
 
 // Item name lookups (for link-tracking labels)
 export const itemNameApi = {
-  async fetchEventNames() {
+  async fetchEventNames(cityFilter?: string) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return []
-    const { data, error } = await supabase
+    let query = supabase
       .from('events')
       .select('id, name')
       .eq('event_type', 'EVENT')
+    if (cityFilter) query = query.eq('city', cityFilter)
+    const { data, error } = await query
     if (error) { console.error('Error fetching event names:', error); return [] }
     return (data || []).map((row: any) => ({ id: row.id, name: row.name }))
   },
 
-  async fetchHackathonNames() {
+  async fetchHackathonNames(cityFilter?: string) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return []
-    const { data, error } = await supabase
+    let query = supabase
       .from('events')
       .select('id, name')
       .eq('event_type', 'HACKATHON')
+    if (cityFilter) query = query.eq('city', cityFilter)
+    const { data, error } = await query
     if (error) { console.error('Error fetching hackathon names:', error); return [] }
     return (data || []).map((row: any) => ({ id: row.id, name: row.name }))
   },
 
-  async fetchScholarshipNames() {
+  async fetchScholarshipNames(cityFilter?: string) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return []
-    const { data, error } = await supabase.from('scholarships').select('id, title')
+    let query = supabase.from('scholarships').select('id, title')
+    if (cityFilter) query = query.contains('cities', [cityFilter])
+    const { data, error } = await query
     if (error) { console.error('Error fetching scholarship names:', error); return [] }
     return (data || []).map((row: any) => ({ id: row.id, name: row.title }))
   },
@@ -250,6 +292,7 @@ export interface TrackedLinkWithStats {
   slug: string
   event_id: string
   event_name?: string | null
+  event_city?: string | null
   click_count: number
   created_at: string
   updated_at: string
@@ -267,14 +310,28 @@ export interface ClicksByItem {
 }
 
 export const linkTrackingApi = {
-  async fetchTrackedLinks(): Promise<TrackedLinkWithStats[]> {
+  async fetchTrackedLinks(cityFilter?: string): Promise<TrackedLinkWithStats[]> {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Not authenticated. Please log in again.')
 
-    const { data, error } = await supabase
+    // When filtering by city, use an inner join on events so PostgREST can
+    // filter rows by the joined event's city. Without a filter, keep the
+    // outer relation to also surface tracked links whose joined event row
+    // is missing.
+    const selectClause = cityFilter
+      ? '*, events!inner(name, city), link_clicks(count)'
+      : '*, events(name, city), link_clicks(count)'
+
+    let query = supabase
       .from('tracked_links')
-      .select('*, events(name), link_clicks(count)')
+      .select(selectClause)
       .order('created_at', { ascending: false })
+
+    if (cityFilter) {
+      query = query.eq('events.city', cityFilter)
+    }
+
+    const { data, error } = await query
     if (error) throw error
 
     return (data || []).map((row: any) => ({
@@ -283,14 +340,15 @@ export const linkTrackingApi = {
       slug: row.slug,
       event_id: row.event_id,
       event_name: row.events?.name ?? null,
+      event_city: row.events?.city ?? null,
       click_count: row.link_clicks?.[0]?.count ?? 0,
       created_at: row.created_at,
       updated_at: row.updated_at,
     }))
   },
 
-  async fetchClicksByChannel(): Promise<ClicksByChannel[]> {
-    const links = await this.fetchTrackedLinks()
+  async fetchClicksByChannel(cityFilter?: string): Promise<ClicksByChannel[]> {
+    const links = await this.fetchTrackedLinks(cityFilter)
     const byChannel = new Map<string, number>()
     for (const link of links) {
       byChannel.set(link.channel, (byChannel.get(link.channel) || 0) + link.click_count)
@@ -298,8 +356,8 @@ export const linkTrackingApi = {
     return Array.from(byChannel.entries()).map(([channel, click_count]) => ({ channel, click_count }))
   },
 
-  async fetchClicksByItem(): Promise<ClicksByItem[]> {
-    const links = await this.fetchTrackedLinks()
+  async fetchClicksByItem(cityFilter?: string): Promise<ClicksByItem[]> {
+    const links = await this.fetchTrackedLinks(cityFilter)
     const byEvent = new Map<string, { name: string; count: number }>()
     for (const link of links) {
       const existing = byEvent.get(link.event_id)
@@ -316,14 +374,20 @@ export const linkTrackingApi = {
     }))
   },
 
-  async fetchTotalClicks(): Promise<number> {
+  async fetchTotalClicks(cityFilter?: string): Promise<number> {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Not authenticated. Please log in again.')
 
-    const { count, error } = await supabase
-      .from('link_clicks')
-      .select('*', { count: 'exact', head: true })
-    if (error) throw error
-    return count || 0
+    if (!cityFilter) {
+      const { count, error } = await supabase
+        .from('link_clicks')
+        .select('*', { count: 'exact', head: true })
+      if (error) throw error
+      return count || 0
+    }
+
+    // For city leads, aggregate click counts from city-filtered tracked links.
+    const links = await this.fetchTrackedLinks(cityFilter)
+    return links.reduce((sum, link) => sum + (link.click_count || 0), 0)
   },
 }

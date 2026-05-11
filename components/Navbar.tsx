@@ -4,9 +4,20 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 
+function formatCity(city: string | null): string {
+  if (!city) return ''
+  return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase()
+}
+
 export default function Navbar() {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin, isCityLead, userCity } = useAuth()
+
+  const roleLabel = isAdmin
+    ? 'Admin'
+    : isCityLead
+      ? `City Lead${userCity ? ` · ${formatCity(userCity)}` : ''}`
+      : ''
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
@@ -19,7 +30,7 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm">
+    <nav className="glass sticky top-0 z-40 border-b border-white/40 rounded-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
@@ -48,9 +59,22 @@ export default function Navbar() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              {user?.email}
-            </span>
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-sm text-gray-600">
+                {user?.email}
+              </span>
+              {roleLabel && (
+                <span
+                  className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium backdrop-blur-sm ring-1 ring-inset ${
+                    isAdmin
+                      ? 'bg-primary-100/70 text-primary-700 ring-primary-200/60'
+                      : 'bg-amber-100/70 text-amber-700 ring-amber-200/60'
+                  }`}
+                >
+                  {roleLabel}
+                </span>
+              )}
+            </div>
             <button
               onClick={signOut}
               className="text-sm text-gray-600 hover:text-gray-900 font-medium"

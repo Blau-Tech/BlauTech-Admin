@@ -13,19 +13,22 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
   if (!isOpen) return null
 
   return (
-    <div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose}></div>
-      <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+    <div className="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      ></div>
+      <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
         <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-          <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-gray-200">
-            <div className="bg-white px-6 pb-6 pt-6">
+          <div className="glass-strong relative transform overflow-hidden rounded-3xl text-left transition-all sm:my-8 sm:w-full sm:max-w-4xl">
+            <div className="px-6 pb-6 pt-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900" id="modal-title">
                   {title}
                 </h3>
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-white/40"
                   onClick={onClose}
                 >
                   <span className="sr-only">Close</span>

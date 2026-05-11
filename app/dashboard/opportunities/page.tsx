@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import OpportunityForm from '@/components/OpportunityForm'
 import { opportunitiesApi } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { format } from 'date-fns'
 
 type OpportunityType = 'PROGRAM' | 'FELLOWSHIP'
@@ -37,6 +38,8 @@ const TYPE_FILTERS: { value: OpportunityType | 'ALL'; label: string }[] = [
 ]
 
 export default function OpportunitiesPage() {
+  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -48,13 +51,14 @@ export default function OpportunitiesPage() {
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null)
 
   useEffect(() => {
+    if (authLoading) return
     loadOpportunities()
-  }, [])
+  }, [authLoading, cityFilter])
 
   const loadOpportunities = async () => {
     try {
       setLoading(true)
-      const data = await opportunitiesApi.fetch()
+      const data = await opportunitiesApi.fetch(cityFilter)
       setOpportunities(data as Opportunity[])
     } catch (err: any) {
       setError(err.message || 'Failed to load opportunities')

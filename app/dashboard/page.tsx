@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import Calendar from '@/components/Calendar'
+import GlassCard from '@/components/ui/GlassCard'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import {
   dashboardStats,
   eventsApi,
   hackathonsApi,
   scholarshipsApi,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 
 const CalendarIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,6 +54,9 @@ interface StatCard {
 }
 
 export default function Dashboard() {
+  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const cityFilter = isCityLead ? userCity ?? undefined : undefined
+
   const [stats, setStats] = useState({
     events: 0,
     hackathons: 0,
@@ -65,19 +71,20 @@ export default function Dashboard() {
   const [calendarLoading, setCalendarLoading] = useState(true)
 
   useEffect(() => {
+    if (authLoading) return
     loadStats()
     loadCalendarData()
-  }, [])
+  }, [authLoading, cityFilter])
 
   const loadStats = async () => {
     try {
       setLoading(true)
       const [events, hackathons, scholarships, opportunities, organisations] = await Promise.all([
-        dashboardStats.getEventsCount(),
-        dashboardStats.getHackathonsCount(),
-        dashboardStats.getScholarshipsCount(),
-        dashboardStats.getOpportunitiesCount(),
-        dashboardStats.getOrganisationsCount(),
+        dashboardStats.getEventsCount(cityFilter),
+        dashboardStats.getHackathonsCount(cityFilter),
+        dashboardStats.getScholarshipsCount(cityFilter),
+        dashboardStats.getOpportunitiesCount(cityFilter),
+        dashboardStats.getOrganisationsCount(cityFilter),
       ])
       setStats({ events, hackathons, scholarships, opportunities, organisations })
     } catch (error) {
@@ -91,9 +98,9 @@ export default function Dashboard() {
     try {
       setCalendarLoading(true)
       const [events, hackathons, scholarships] = await Promise.all([
-        eventsApi.fetch(),
-        hackathonsApi.fetch(),
-        scholarshipsApi.fetch(),
+        eventsApi.fetch(cityFilter),
+        hackathonsApi.fetch(cityFilter),
+        scholarshipsApi.fetch(cityFilter),
       ])
 
       setCalendarEvents(events.filter((e: any) => e.start_date))
@@ -169,7 +176,9 @@ export default function Dashboard() {
             Welcome to BlauTech Admin
           </h1>
           <p className="text-lg text-gray-600">
-            Manage your events, hackathons, scholarships, opportunities and organisations
+            {isCityLead && userCity
+              ? `Showing data for your city: ${userCity.charAt(0) + userCity.slice(1).toLowerCase()}`
+              : 'Manage your events, hackathons, scholarships, opportunities and organisations'}
           </p>
         </div>
 
@@ -180,30 +189,32 @@ export default function Dashboard() {
               <Link
                 key={card.name}
                 href={card.href}
-                className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border-2 border-gray-100 hover:shadow-xl hover:border-primary-300 transition-all duration-300 transform hover:-translate-y-1"
+                className="block"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      {card.name}
-                    </p>
-                    {loading ? (
-                      <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
-                    ) : (
-                      <p className="text-4xl font-bold text-gray-900 mb-1">{count}</p>
-                    )}
-                    <p className="text-sm text-gray-500 mt-2">Active items</p>
+                <GlassCard className="group relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:bg-white/70 h-full">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        {card.name}
+                      </p>
+                      {loading ? (
+                        <div className="h-10 w-20 bg-white/40 rounded animate-pulse"></div>
+                      ) : (
+                        <p className="text-4xl font-bold text-gray-900 mb-1">{count}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-2">Active items</p>
+                    </div>
+                    <div className={`p-4 rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
+                      {card.icon}
+                    </div>
                   </div>
-                  <div className={`p-4 rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    {card.icon}
+                  <div className="mt-4 flex items-center text-sm font-medium text-primary-600 group-hover:text-primary-700">
+                    Manage
+                    <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
-                </div>
-                <div className="mt-4 flex items-center text-sm font-medium text-primary-600 group-hover:text-primary-700">
-                  Manage
-                  <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+                </GlassCard>
               </Link>
             )
           })}
@@ -212,10 +223,9 @@ export default function Dashboard() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Events Calendar</h2>
           {calendarLoading ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              <p className="mt-4 text-gray-500">Loading calendar...</p>
-            </div>
+            <GlassCard className="p-12">
+              <LoadingSpinner label="Loading calendar..." />
+            </GlassCard>
           ) : (
             <Calendar
               events={calendarEvents}
