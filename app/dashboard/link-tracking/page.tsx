@@ -67,6 +67,18 @@ export default function LinkTrackingPage() {
       .sort((a, b) => b.clicks - a.clicks)
   }, [trackedLinks])
 
+  // Aggregate clicks by event city (super-admin comparison view only)
+  const cityTotals = useMemo(() => {
+    const totals: Record<string, number> = {}
+    trackedLinks.forEach((l) => {
+      const key = l.event_city || 'GLOBAL'
+      totals[key] = (totals[key] || 0) + l.click_count
+    })
+    return Object.entries(totals)
+      .map(([city, clicks]) => ({ city, clicks }))
+      .sort((a, b) => b.clicks - a.clicks)
+  }, [trackedLinks])
+
   // Aggregate per-event with channel breakdown
   const groupedByEvent = useMemo(() => {
     const map = new Map<string, {
@@ -178,6 +190,29 @@ export default function LinkTrackingPage() {
             )
           })}
         </div>
+
+        {/* By City — only meaningful for super-admins (city leads are already scoped) */}
+        {!isCityLead && cityTotals.length > 1 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">By City</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {cityTotals.map(({ city, clicks }) => {
+                const label = city === 'GLOBAL' ? 'Global / Online' : city.charAt(0) + city.slice(1).toLowerCase()
+                return (
+                  <GlassCard key={city} className="p-5">
+                    <p className="text-sm font-medium text-gray-600">{label}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{clicks} clicks</p>
+                    {totalClicks > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {Math.round((clicks / totalClicks) * 100)}% of total
+                      </p>
+                    )}
+                  </GlassCard>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Per-event table */}
         <div className="mb-8">
