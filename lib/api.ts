@@ -391,3 +391,16 @@ export const linkTrackingApi = {
     return links.reduce((sum, link) => sum + (link.click_count || 0), 0)
   },
 }
+
+/**
+ * Trigger an n8n workflow via a POST request.
+ * @param url     - The n8n webhook URL (TODO: fill in per workflow)
+ * @param payload - Any JSON body to send with the request
+ */
+export async function triggerWorkflow(url: string, payload: Record<string, unknown> = {}): Promise<void> {
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}

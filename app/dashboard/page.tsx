@@ -6,11 +6,13 @@ import Link from 'next/link'
 import Calendar from '@/components/Calendar'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import {
   dashboardStats,
   eventsApi,
   hackathonsApi,
   scholarshipsApi,
+  triggerWorkflow,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 
@@ -69,6 +71,7 @@ export default function Dashboard() {
   const [calendarScholarships, setCalendarScholarships] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [calendarLoading, setCalendarLoading] = useState(true)
+  const [pendingWorkflow, setPendingWorkflow] = useState<'events-linkedin' | 'hackathons-linkedin' | 'newsletter' | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -91,6 +94,28 @@ export default function Dashboard() {
       console.error('Error loading stats:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const confirmWorkflow = async () => {
+    if (pendingWorkflow === 'events-linkedin') {
+      // TODO: define the request URL and body payload
+      await triggerWorkflow('TODO_LINKEDIN_POST_URL', {
+        // TODO: populate with the required fields
+        city: cityFilter,
+      })
+    } else if (pendingWorkflow === 'hackathons-linkedin') {
+      // TODO: define the request URL and body payload
+      await triggerWorkflow('TODO_LINKEDIN_POST_URL', {
+        // TODO: populate with the required fields
+        city: cityFilter,
+      })
+    } else if (pendingWorkflow === 'newsletter') {
+      // TODO: define the request URL and body payload
+      await triggerWorkflow('TODO_NEWSLETTER_WORKFLOW_URL', {
+        // TODO: populate with the required fields
+        city: cityFilter,
+      })
     }
   }
 
@@ -221,6 +246,42 @@ export default function Dashboard() {
         </div>
 
         <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingWorkflow('events-linkedin')}
+                className="flex items-center gap-2 rounded-xl bg-[#0077B5]/90 backdrop-blur-sm px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#005f8e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B5] transition-all"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+                Events — Generate LinkedIn Draft
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingWorkflow('hackathons-linkedin')}
+                className="flex items-center gap-2 rounded-xl bg-[#0077B5]/90 backdrop-blur-sm px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#005f8e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B5] transition-all"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+                Hackathons — Generate LinkedIn Draft
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingWorkflow('newsletter')}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600/90 to-purple-600/90 backdrop-blur-sm px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-violet-700 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Generate Newsletter Draft
+              </button>
+          </div>
+        </div>
+
+        <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Events Calendar</h2>
           {calendarLoading ? (
             <GlassCard className="p-12">
@@ -235,6 +296,42 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={pendingWorkflow === 'events-linkedin'}
+        title="Generate Events LinkedIn Draft"
+        info="The next 4 highlighted events with the closest start dates will be included in the post."
+        checklist={[
+          'Have you highlighted the events you want featured in the post?',
+        ]}
+        confirmLabel="Yes, generate draft"
+        onConfirm={confirmWorkflow}
+        onCancel={() => setPendingWorkflow(null)}
+      />
+
+      <ConfirmModal
+        isOpen={pendingWorkflow === 'hackathons-linkedin'}
+        title="Generate Hackathons LinkedIn Draft"
+        info="The next 3 highlighted hackathons with the closest start dates will be included in the post."
+        checklist={[
+          'Have you highlighted the hackathons you want featured in the post?',
+        ]}
+        confirmLabel="Yes, generate draft"
+        onConfirm={confirmWorkflow}
+        onCancel={() => setPendingWorkflow(null)}
+      />
+
+      <ConfirmModal
+        isOpen={pendingWorkflow === 'newsletter'}
+        title="Generate Newsletter Draft"
+        checklist={[
+          'Have you highlighted the events to include in the newsletter?',
+          'Have you highlighted the hackathons to include in the newsletter?',
+        ]}
+        confirmLabel="Yes, generate draft"
+        onConfirm={confirmWorkflow}
+        onCancel={() => setPendingWorkflow(null)}
+      />
     </Layout>
   )
 }
