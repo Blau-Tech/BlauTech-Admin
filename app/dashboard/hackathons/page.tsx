@@ -14,7 +14,7 @@ import SuccessBanner from '@/components/ui/SuccessBanner'
 import SearchBar from '@/components/ui/SearchBar'
 import Badge from '@/components/ui/Badge'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
+import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
@@ -57,10 +57,15 @@ export default function HackathonsPage() {
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
   const confirmLinkedInPost = async () => {
-    // TODO: define the request URL and body payload
-    await triggerWorkflow('TODO_LINKEDIN_POST_URL', {
-      // TODO: populate with the required fields
-    })
+    try {
+      setError('')
+      setSuccessMessage('')
+      await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
+      setLinkedInConfirmOpen(false)
+      setSuccessMessage('LinkedIn hackathons draft generation started.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to start LinkedIn draft generation.')
+    }
   }
 
   const handleEdit = (hackathon: any) => {
@@ -158,9 +163,28 @@ export default function HackathonsPage() {
     return format(date, 'EEEE')
   }
 
+  const compareHackathonsByDateTime = (a: any, b: any) => {
+    const aDateTime = combineDateTime(a.start_date, a.start_time)
+    const bDateTime = combineDateTime(b.start_date, b.start_time)
+
+    if (aDateTime && !bDateTime) return -1
+    if (!aDateTime && bDateTime) return 1
+    if (aDateTime && bDateTime) {
+      const timeDiff = aDateTime.getTime() - bDateTime.getTime()
+      if (timeDiff !== 0) return timeDiff
+    }
+
+    return (a?.name || a?.title || '').toString().localeCompare((b?.name || b?.title || '').toString())
+  }
+
   // Filter hackathons based on search
   const filteredHackathons = useMemo(() => {
     let filtered = [...hackathons]
+
+    filtered = filtered.filter((hackathon) => {
+      if (!hackathon.start_date) return true
+      return !isPast(startOfDay(new Date(hackathon.start_date)))
+    })
 
     // Search filter
     if (searchQuery.trim()) {
@@ -179,7 +203,7 @@ export default function HackathonsPage() {
       })
     }
 
-    return filtered
+    return filtered.sort(compareHackathonsByDateTime)
   }, [hackathons, searchQuery])
 
   // Group filtered hackathons by date for chronological view
@@ -202,13 +226,7 @@ export default function HackathonsPage() {
     sortedDates.forEach((dateKey) => {
       result.push({
         date: new Date(dateKey),
-        hackathons: grouped[dateKey].sort((a, b) => {
-          const dateTimeA = combineDateTime(a.start_date, a.start_time)
-          const dateTimeB = combineDateTime(b.start_date, b.start_time)
-          const timeA = dateTimeA ? dateTimeA.getTime() : 0
-          const timeB = dateTimeB ? dateTimeB.getTime() : 0
-          return timeA - timeB
-        }),
+        hackathons: grouped[dateKey].sort(compareHackathonsByDateTime),
       })
     })
     return result

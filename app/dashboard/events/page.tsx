@@ -33,7 +33,7 @@ export default function EventsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortAscending, setSortAscending] = useState(true) // true = earliest first, false = latest first
-  const [hidePastEvents, setHidePastEvents] = useState(false)
+  const [hidePastEvents, setHidePastEvents] = useState(true)
   
   // Boolean filters - when true, show only events where that attribute is NOT set
   const [filterNotHighlighted, setFilterNotHighlighted] = useState(false)
@@ -71,10 +71,15 @@ export default function EventsPage() {
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
   const confirmLinkedInPost = async () => {
-    // TODO: define the request URL and body payload
-    await triggerWorkflow('TODO_LINKEDIN_POST_URL', {
-      // TODO: populate with the required fields
-    })
+    try {
+      setError('')
+      setSuccessMessage('')
+      await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
+      setLinkedInConfirmOpen(false)
+      setSuccessMessage('LinkedIn events draft generation started.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to start LinkedIn draft generation.')
+    }
   }
 
   const handleEdit = (event: any) => {
@@ -514,7 +519,7 @@ export default function EventsPage() {
               onClick={() => setHidePastEvents(!hidePastEvents)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
                 hidePastEvents
-                  ? 'bg-red-100/80 text-red-800 ring-2 ring-red-300/60 shadow-sm'
+                  ? 'bg-green-100/80 text-green-800 ring-2 ring-green-300/60 shadow-sm'
                   : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
               }`}
             >
@@ -531,7 +536,7 @@ export default function EventsPage() {
               onClick={() => setFilterNotHighlighted(!filterNotHighlighted)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
                 filterNotHighlighted
-                  ? 'bg-yellow-100/80 text-yellow-800 ring-2 ring-yellow-300/60 shadow-sm'
+                  ? 'bg-green-100/80 text-green-800 ring-2 ring-green-300/60 shadow-sm'
                   : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
               }`}
             >
@@ -545,7 +550,7 @@ export default function EventsPage() {
               onClick={() => setFilterNotLinkedIn(!filterNotLinkedIn)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
                 filterNotLinkedIn
-                  ? 'bg-blue-100/80 text-blue-800 ring-2 ring-blue-300/60 shadow-sm'
+                  ? 'bg-green-100/80 text-green-800 ring-2 ring-green-300/60 shadow-sm'
                   : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
               }`}
             >
@@ -573,7 +578,7 @@ export default function EventsPage() {
               onClick={() => setFilterNotNewsletter(!filterNotNewsletter)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
                 filterNotNewsletter
-                  ? 'bg-purple-100/80 text-purple-800 ring-2 ring-purple-300/60 shadow-sm'
+                  ? 'bg-green-100/80 text-green-800 ring-2 ring-green-300/60 shadow-sm'
                   : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
               }`}
             >

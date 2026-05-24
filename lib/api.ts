@@ -394,13 +394,26 @@ export const linkTrackingApi = {
 
 /**
  * Trigger an n8n workflow via a POST request.
- * @param url     - The n8n webhook URL (TODO: fill in per workflow)
- * @param payload - Any JSON body to send with the request
+ * @param path    - The n8n webhook endpoint path
+ * @param payload - Any JSON-serializable body to send with the request
  */
-export async function triggerWorkflow(url: string, payload: Record<string, unknown> = {}): Promise<void> {
-  await fetch(url, {
+export async function triggerWorkflow(path: string, payload: unknown = {}): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL
+
+  if (!baseUrl) {
+    throw new Error('n8n webhook base URL is not configured.')
+  }
+
+  const url = new URL(path.replace(/^\/+/, ''), `${baseUrl.replace(/\/+$/, '')}/`)
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(data?.message || response.statusText || 'Workflow request failed.')
+  }
 }
