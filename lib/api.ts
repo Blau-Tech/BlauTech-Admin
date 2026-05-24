@@ -398,13 +398,7 @@ export const linkTrackingApi = {
  * @param payload - Any JSON-serializable body to send with the request
  */
 export async function triggerWorkflow(path: string, payload: unknown = {}): Promise<void> {
-  const baseUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL
-
-  if (!baseUrl) {
-    throw new Error('n8n webhook base URL is not configured.')
-  }
-
-  const url = new URL(path.replace(/^\/+/, ''), `${baseUrl.replace(/\/+$/, '')}/`)
+  const url = `/api/workflows/${path.replace(/^\/+/, '')}`
 
   const response = await fetch(url, {
     method: 'POST',

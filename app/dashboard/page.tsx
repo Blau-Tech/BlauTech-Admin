@@ -99,17 +99,9 @@ export default function Dashboard() {
 
   const confirmWorkflow = async () => {
     if (pendingWorkflow === 'events-linkedin') {
-      // TODO: define the request URL and body payload
-      await triggerWorkflow('TODO_LINKEDIN_POST_URL', {
-        // TODO: populate with the required fields
-        city: cityFilter,
-      })
+      await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
     } else if (pendingWorkflow === 'hackathons-linkedin') {
-      // TODO: define the request URL and body payload
-      await triggerWorkflow('TODO_LINKEDIN_POST_URL', {
-        // TODO: populate with the required fields
-        city: cityFilter,
-      })
+      await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
     } else if (pendingWorkflow === 'newsletter') {
       // TODO: define the request URL and body payload
       await triggerWorkflow('TODO_NEWSLETTER_WORKFLOW_URL', {
