@@ -290,7 +290,13 @@ export interface TrackedLinkWithStats {
   id: string
   channel: 'WHATSAPP' | 'LINKEDIN' | 'WEBSITE' | 'NEWSLETTER'
   slug: string
-  event_id: string
+  event_id?: string | null
+  scholarship_id?: string | null
+  opportunity_id?: string | null
+  entity_id: string
+  entity_type: 'EVENT' | 'HACKATHON' | 'SCHOLARSHIP' | 'OPPORTUNITY'
+  entity_name?: string | null
+  entity_city?: string | null
   event_name?: string | null
   event_city?: string | null
   click_count: number
@@ -304,9 +310,15 @@ export interface ClicksByChannel {
 }
 
 export interface ClicksByItem {
-  event_id: string
-  event_name: string
+  entity_id: string
+  entity_name: string
+  entity_type: TrackedLinkWithStats['entity_type']
   click_count: number
+}
+
+function formatCityScope(cities?: string[] | null): string | null {
+  if (!cities || cities.length === 0) return 'GLOBAL'
+  return cities.join(', ')
 }
 
 export const linkTrackingApi = {
@@ -314,37 +326,61 @@ export const linkTrackingApi = {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Not authenticated. Please log in again.')
 
-    // When filtering by city, use an inner join on events so PostgREST can
-    // filter rows by the joined event's city. Without a filter, keep the
-    // outer relation to also surface tracked links whose joined event row
-    // is missing.
-    const selectClause = cityFilter
-      ? '*, events!inner(name, city), link_clicks(count)'
-      : '*, events(name, city), link_clicks(count)'
-
-    let query = supabase
+    const city = cityFilter?.toUpperCase()
+    const query = supabase
       .from('tracked_links')
-      .select(selectClause)
+      .select('*, events(name, city, event_type), scholarships(title, cities), opportunities(title, cities), link_clicks(count)')
       .order('created_at', { ascending: false })
-
-    if (cityFilter) {
-      query = query.eq('events.city', cityFilter)
-    }
 
     const { data, error } = await query
     if (error) throw error
 
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      channel: row.channel,
-      slug: row.slug,
-      event_id: row.event_id,
-      event_name: row.events?.name ?? null,
-      event_city: row.events?.city ?? null,
-      click_count: row.link_clicks?.[0]?.count ?? 0,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    }))
+    const rows = city
+      ? (data || []).filter((row: any) => {
+          if (row.events?.city) return row.events.city === city
+          const scholarshipCities = row.scholarships?.cities || []
+          if (row.scholarships) return scholarshipCities.length === 0 || scholarshipCities.includes(city)
+          const opportunityCities = row.opportunities?.cities || []
+          if (row.opportunities) return opportunityCities.length === 0 || opportunityCities.includes(city)
+          return false
+        })
+      : (data || [])
+
+    return rows.map((row: any) => {
+      const entityType: TrackedLinkWithStats['entity_type'] = row.event_id
+        ? row.events?.event_type === 'HACKATHON' ? 'HACKATHON' : 'EVENT'
+        : row.scholarship_id
+          ? 'SCHOLARSHIP'
+          : 'OPPORTUNITY'
+      const entityId = row.event_id || row.scholarship_id || row.opportunity_id || row.id
+      const entityName =
+        row.events?.name ||
+        row.scholarships?.title ||
+        row.opportunities?.title ||
+        null
+      const entityCity =
+        row.events?.city ||
+        formatCityScope(row.scholarships?.cities || row.opportunities?.cities) ||
+        null
+
+      return {
+        id: row.id,
+        channel: row.channel,
+        slug: row.slug,
+        event_id: row.event_id,
+        scholarship_id: row.scholarship_id,
+        opportunity_id: row.opportunity_id,
+        entity_id: entityId,
+        entity_type: entityType,
+        entity_name: entityName,
+        entity_city: entityCity,
+        event_name: entityName,
+        event_city: entityCity,
+        click_count: row.link_clicks?.[0]?.count ?? 0,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }
+    })
   },
 
   async fetchClicksByChannel(cityFilter?: string): Promise<ClicksByChannel[]> {
@@ -358,18 +394,23 @@ export const linkTrackingApi = {
 
   async fetchClicksByItem(cityFilter?: string): Promise<ClicksByItem[]> {
     const links = await this.fetchTrackedLinks(cityFilter)
-    const byEvent = new Map<string, { name: string; count: number }>()
+    const byItem = new Map<string, { name: string; type: TrackedLinkWithStats['entity_type']; count: number }>()
     for (const link of links) {
-      const existing = byEvent.get(link.event_id)
+      const existing = byItem.get(link.entity_id)
       if (existing) {
         existing.count += link.click_count
       } else {
-        byEvent.set(link.event_id, { name: link.event_name || 'Unknown', count: link.click_count })
+        byItem.set(link.entity_id, {
+          name: link.entity_name || 'Unknown',
+          type: link.entity_type,
+          count: link.click_count,
+        })
       }
     }
-    return Array.from(byEvent.entries()).map(([event_id, { name, count }]) => ({
-      event_id,
-      event_name: name,
+    return Array.from(byItem.entries()).map(([entity_id, { name, type, count }]) => ({
+      entity_id,
+      entity_name: name,
+      entity_type: type,
       click_count: count,
     }))
   },

@@ -67,11 +67,11 @@ export default function LinkTrackingPage() {
       .sort((a, b) => b.clicks - a.clicks)
   }, [trackedLinks])
 
-  // Aggregate clicks by event city (super-admin comparison view only)
+  // Aggregate clicks by target city (super-admin comparison view only)
   const cityTotals = useMemo(() => {
     const totals: Record<string, number> = {}
     trackedLinks.forEach((l) => {
-      const key = l.event_city || 'GLOBAL'
+      const key = l.entity_city || 'GLOBAL'
       totals[key] = (totals[key] || 0) + l.click_count
     })
     return Object.entries(totals)
@@ -79,22 +79,24 @@ export default function LinkTrackingPage() {
       .sort((a, b) => b.clicks - a.clicks)
   }, [trackedLinks])
 
-  // Aggregate per-event with channel breakdown
-  const groupedByEvent = useMemo(() => {
+  // Aggregate per tracked item with channel breakdown
+  const groupedByItem = useMemo(() => {
     const map = new Map<string, {
-      event_id: string
-      event_name: string
+      entity_id: string
+      entity_name: string
+      entity_type: TrackedLinkWithStats['entity_type']
       channels: Record<string, number>
       total: number
       created_at: string
     }>()
 
     trackedLinks.forEach((link) => {
-      const key = link.event_id
+      const key = link.entity_id
       if (!map.has(key)) {
         map.set(key, {
-          event_id: link.event_id,
-          event_name: link.event_name || `Unknown event (${link.event_id.slice(0, 8)})`,
+          entity_id: link.entity_id,
+          entity_name: link.entity_name || `Unknown item (${link.entity_id.slice(0, 8)})`,
+          entity_type: link.entity_type,
           channels: {},
           total: 0,
           created_at: link.created_at,
@@ -120,10 +122,10 @@ export default function LinkTrackingPage() {
         items.sort((a, b) => a.total - b.total)
         break
       case 'name_asc':
-        items.sort((a, b) => a.event_name.localeCompare(b.event_name))
+        items.sort((a, b) => a.entity_name.localeCompare(b.entity_name))
         break
       case 'name_desc':
-        items.sort((a, b) => b.event_name.localeCompare(a.event_name))
+        items.sort((a, b) => b.entity_name.localeCompare(a.entity_name))
         break
       case 'created_asc':
         items.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
@@ -152,7 +154,7 @@ export default function LinkTrackingPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Link Tracking</h1>
           <p className="text-gray-600">
-            See where your users come from — click analytics for events across all channels.
+            See where your users come from — click analytics for events, hackathons, scholarships, and opportunities.
           </p>
         </div>
 
@@ -214,10 +216,10 @@ export default function LinkTrackingPage() {
           </div>
         )}
 
-        {/* Per-event table */}
+        {/* Per-item table */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Per-Event Breakdown</h2>
+            <h2 className="text-xl font-bold text-gray-900">Per-Item Breakdown</h2>
             <div className="flex flex-wrap items-center gap-3">
               <label className="text-sm text-gray-600 font-medium">Sort by:</label>
               <select
@@ -245,7 +247,7 @@ export default function LinkTrackingPage() {
             </div>
           </div>
 
-          {groupedByEvent.length === 0 ? (
+          {groupedByItem.length === 0 ? (
             <GlassCard className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -258,7 +260,7 @@ export default function LinkTrackingPage() {
                 <table className="min-w-full divide-y divide-white/40">
                   <thead className="bg-white/30 backdrop-blur-sm">
                     <tr>
-                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Event</th>
+                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Item</th>
                       {ALL_CHANNELS.map((c) => (
                         <th key={c} className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
                           {CHANNEL_CONFIG[c].label}
@@ -268,14 +270,16 @@ export default function LinkTrackingPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/40">
-                    {groupedByEvent.map((item) => (
-                      <tr key={item.event_id} className="hover:bg-white/40 transition-colors">
+                    {groupedByItem.map((item) => (
+                      <tr key={item.entity_id} className="hover:bg-white/40 transition-colors">
                         <td className="py-4 pl-6 pr-3 text-sm">
                           <div>
-                            <p className="font-semibold text-gray-900 truncate max-w-[300px]" title={item.event_name}>
-                              {item.event_name}
+                            <p className="font-semibold text-gray-900 truncate max-w-[300px]" title={item.entity_name}>
+                              {item.entity_name}
                             </p>
-                            <p className="text-xs text-gray-400 font-mono mt-0.5">ID: {item.event_id.slice(0, 8)}…</p>
+                            <p className="text-xs text-gray-400 font-mono mt-0.5">
+                              {item.entity_type} · ID: {item.entity_id.slice(0, 8)}…
+                            </p>
                           </div>
                         </td>
                         {ALL_CHANNELS.map((c) => {
@@ -318,7 +322,7 @@ export default function LinkTrackingPage() {
                 <table className="min-w-full divide-y divide-white/40">
                   <thead className="bg-white/30 backdrop-blur-sm">
                     <tr>
-                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Event</th>
+                      <th className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-gray-900">Item</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Channel</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Slug</th>
                       <th className="px-3 py-3.5 pr-6 text-center text-sm font-semibold text-gray-900">Clicks</th>
@@ -330,7 +334,8 @@ export default function LinkTrackingPage() {
                       return (
                         <tr key={link.id} className="hover:bg-white/40 transition-colors">
                           <td className="py-4 pl-6 pr-3 text-sm font-medium text-gray-900 truncate max-w-[300px]">
-                            {link.event_name || `Event ${link.event_id.slice(0, 8)}…`}
+                            {link.entity_name || `${link.entity_type} ${link.entity_id.slice(0, 8)}…`}
+                            <span className="ml-2 text-xs font-normal text-gray-400">{link.entity_type}</span>
                           </td>
                           <td className="px-3 py-4 text-sm">
                             {config ? (
