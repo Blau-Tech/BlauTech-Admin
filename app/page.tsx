@@ -5,20 +5,20 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 
 export default function Home() {
-  const { user, loading, isAdmin } = useAuth()
+  const { user, loading, isAdmin, isCityLead } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
         router.push('/login')
-      } else if (!isAdmin) {
+      } else if (!isAdmin && !isCityLead) {
         router.push('/unauthorized')
       } else {
         router.push('/dashboard')
       }
     }
-  }, [user, loading, isAdmin, router])
+  }, [user, loading, isAdmin, isCityLead, router])
 
   if (loading) {
     return (

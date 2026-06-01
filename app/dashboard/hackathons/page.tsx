@@ -2,18 +2,25 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/Layout'
-import DataTable from '@/components/DataTable'
 import Modal from '@/components/Modal'
 import HackathonForm from '@/components/HackathonForm'
 import HackathonDetailView from '@/components/HackathonDetailView'
-import { hackathonsApi } from '@/lib/api'
-import { useCityScope } from '@/lib/cityScope'
-import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
+import { hackathonsApi, triggerWorkflow } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
+import GlassCard from '@/components/ui/GlassCard'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ErrorBanner from '@/components/ui/ErrorBanner'
+import SuccessBanner from '@/components/ui/SuccessBanner'
+import SearchBar from '@/components/ui/SearchBar'
+import Badge from '@/components/ui/Badge'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
 export default function HackathonsPage() {
-  const { selectedCityId } = useCityScope()
+  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [hackathons, setHackathons] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -26,13 +33,14 @@ export default function HackathonsPage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
+    if (authLoading) return
     loadHackathons()
-  }, [selectedCityId])
+  }, [authLoading, cityFilter])
 
   const loadHackathons = async () => {
     try {
       setLoading(true)
-      const data = await hackathonsApi.fetch(selectedCityId)
+      const data = await hackathonsApi.fetch(cityFilter)
       setHackathons(data)
     } catch (err: any) {
       setError(err.message)
@@ -44,6 +52,20 @@ export default function HackathonsPage() {
   const handleAdd = () => {
     setEditingHackathon(null)
     setIsModalOpen(true)
+  }
+
+  const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
+
+  const confirmLinkedInPost = async () => {
+    try {
+      setError('')
+      setSuccessMessage('')
+      await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
+      setLinkedInConfirmOpen(false)
+      setSuccessMessage('LinkedIn hackathons draft generation started.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to start LinkedIn draft generation.')
+    }
   }
 
   const handleEdit = (hackathon: any) => {
@@ -141,9 +163,28 @@ export default function HackathonsPage() {
     return format(date, 'EEEE')
   }
 
+  const compareHackathonsByDateTime = (a: any, b: any) => {
+    const aDateTime = combineDateTime(a.start_date, a.start_time)
+    const bDateTime = combineDateTime(b.start_date, b.start_time)
+
+    if (aDateTime && !bDateTime) return -1
+    if (!aDateTime && bDateTime) return 1
+    if (aDateTime && bDateTime) {
+      const timeDiff = aDateTime.getTime() - bDateTime.getTime()
+      if (timeDiff !== 0) return timeDiff
+    }
+
+    return (a?.name || a?.title || '').toString().localeCompare((b?.name || b?.title || '').toString())
+  }
+
   // Filter hackathons based on search
   const filteredHackathons = useMemo(() => {
     let filtered = [...hackathons]
+
+    filtered = filtered.filter((hackathon) => {
+      if (!hackathon.start_date) return true
+      return !isPast(startOfDay(new Date(hackathon.start_date)))
+    })
 
     // Search filter
     if (searchQuery.trim()) {
@@ -162,7 +203,7 @@ export default function HackathonsPage() {
       })
     }
 
-    return filtered
+    return filtered.sort(compareHackathonsByDateTime)
   }, [hackathons, searchQuery])
 
   // Group filtered hackathons by date for chronological view
@@ -185,13 +226,7 @@ export default function HackathonsPage() {
     sortedDates.forEach((dateKey) => {
       result.push({
         date: new Date(dateKey),
-        hackathons: grouped[dateKey].sort((a, b) => {
-          const dateTimeA = combineDateTime(a.start_date, a.start_time)
-          const dateTimeB = combineDateTime(b.start_date, b.start_time)
-          const timeA = dateTimeA ? dateTimeA.getTime() : 0
-          const timeB = dateTimeB ? dateTimeB.getTime() : 0
-          return timeA - timeB
-        }),
+        hackathons: grouped[dateKey].sort(compareHackathonsByDateTime),
       })
     })
     return result
@@ -251,7 +286,7 @@ export default function HackathonsPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="text-center py-12">Loading...</div>
+        <LoadingSpinner label="Loading hackathons..." />
       </Layout>
     )
   }
@@ -259,48 +294,8 @@ export default function HackathonsPage() {
   return (
     <Layout>
       <div className="px-4 sm:px-6 lg:px-8">
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
-                </div>
-              </div>
-              <div className="ml-auto pl-3">
-                <button
-                  onClick={() => setError('')}
-                  className="inline-flex text-red-400 hover:text-red-600"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {successMessage && (
-          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {error && <ErrorBanner message={error} onClose={() => setError('')} className="mb-4" />}
+        {successMessage && <SuccessBanner message={successMessage} className="mb-4" />}
         
         {/* Header */}
         <div className="sm:flex sm:items-center mb-6">
@@ -313,15 +308,14 @@ export default function HackathonsPage() {
             )}
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center gap-3">
-            {/* View Toggle Buttons */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-1 glass-subtle rounded-2xl p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('card')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                   viewMode === 'card'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white/70 text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:bg-white/40'
                 }`}
                 title="Card View"
               >
@@ -332,10 +326,10 @@ export default function HackathonsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                   viewMode === 'table'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white/70 text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:bg-white/40'
                 }`}
                 title="Table View"
               >
@@ -346,10 +340,10 @@ export default function HackathonsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('chronological')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                   viewMode === 'chronological'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white/70 text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:bg-white/40'
                 }`}
                 title="Chronological View"
               >
@@ -360,45 +354,33 @@ export default function HackathonsPage() {
             </div>
             <button
               type="button"
+                onClick={() => setLinkedInConfirmOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-[#0077B5]/90 backdrop-blur-sm px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-[#005f8e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0077B5] transition-all"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
+              Generate LinkedIn Draft
+            </button>
+            <button
+              type="button"
               onClick={handleAdd}
-              className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
+              className="block rounded-xl bg-primary-600/90 backdrop-blur-sm px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-all"
             >
               Add Hackathon
             </button>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Search hackathons by title, description, location, or organizer..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              >
-                <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search hackathons by title, description, location, or organizer..."
+          className="mb-6"
+        />
 
-        {/* Hackathons Display - Conditional Rendering */}
         {filteredHackathons.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <GlassCard className="text-center py-12">
             <p className="text-gray-500">
               {hackathons.length === 0
                 ? 'No hackathons available'
@@ -412,7 +394,7 @@ export default function HackathonsPage() {
                 Clear search
               </button>
             )}
-          </div>
+          </GlassCard>
         ) : viewMode === 'card' ? (
           /* Card View */
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
@@ -420,19 +402,18 @@ export default function HackathonsPage() {
               <div
                 key={hackathon.id}
                 onClick={() => handleViewDetails(hackathon)}
-                className={`group relative rounded-xl shadow-sm border-2 transition-all duration-300 overflow-hidden cursor-pointer ${
+                className={`group relative rounded-3xl backdrop-blur-xl transition-all duration-300 overflow-hidden cursor-pointer border hover:-translate-y-1 ${
                   hackathon.is_highlight
-                    ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-xl ring-2 ring-yellow-200 ring-opacity-50'
-                    : 'bg-white border-gray-200 hover:shadow-lg hover:border-primary-300'
+                    ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-yellow-200/30 shadow-lg'
+                    : 'glass hover:shadow-xl hover:bg-white/70'
                 }`}
               >
-                {/* Highlight Toggle Button */}
                 <button
                   onClick={(e) => handleToggleHighlight(hackathon, e)}
-                  className={`absolute top-4 right-4 z-10 p-2 rounded-full transition-all duration-200 ${
+                  className={`absolute top-4 right-4 z-10 p-2 rounded-full transition-all duration-200 backdrop-blur-sm ${
                     hackathon.is_highlight
-                      ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500 shadow-md'
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-yellow-500'
+                      ? 'bg-yellow-400/90 text-yellow-900 hover:bg-yellow-500 shadow-md ring-1 ring-yellow-300/60'
+                      : 'bg-white/50 text-gray-400 hover:bg-white/70 hover:text-yellow-500 ring-1 ring-white/40'
                   }`}
                   title={hackathon.is_highlight ? 'Remove highlight' : 'Add highlight'}
                 >
@@ -441,7 +422,6 @@ export default function HackathonsPage() {
                   </svg>
                 </button>
 
-                {/* Header with Status and Category */}
                 <div className="px-6 pt-6 pb-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 pr-10">
@@ -449,15 +429,11 @@ export default function HackathonsPage() {
                         {hackathon.name || hackathon.title}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {hackathon.is_highlight && (
-                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            ⭐ Highlight
-                          </span>
-                        )}
+                        {hackathon.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                       </div>
                     </div>
                   </div>
-                  
+
                   {hackathon.description && (
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                       {hackathon.description}
@@ -465,8 +441,7 @@ export default function HackathonsPage() {
                   )}
                 </div>
 
-                {/* Details Section */}
-                <div className="px-6 pb-4 space-y-3 border-t border-gray-100 pt-4">
+                <div className="px-6 pb-4 space-y-3 border-t border-white/40 pt-4">
                   {/* Date & Time */}
                   <div className="flex items-start gap-3">
                     <svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -559,23 +534,16 @@ export default function HackathonsPage() {
                     </div>
                   )}
 
-                  {/* Social Media Posting Status */}
                   {(hackathon.posted_linkedin || hackathon.posted_whatsapp || hackathon.posted_newsletter) && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-white/40">
                       {hackathon.posted_linkedin && (
-                        <span className="text-xs text-gray-500">
-                          ✓ LinkedIn
-                        </span>
+                        <span className="text-xs text-gray-500">✓ LinkedIn</span>
                       )}
                       {hackathon.posted_whatsapp && (
-                        <span className="text-xs text-gray-500">
-                          ✓ WhatsApp
-                        </span>
+                        <span className="text-xs text-gray-500">✓ WhatsApp</span>
                       )}
                       {hackathon.posted_newsletter && (
-                        <span className="text-xs text-gray-500">
-                          ✓ Newsletter
-                        </span>
+                        <span className="text-xs text-gray-500">✓ Newsletter</span>
                       )}
                     </div>
                   )}
@@ -588,9 +556,9 @@ export default function HackathonsPage() {
           <div className="mt-8 flow-root">
             <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
               <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                <div className="overflow-hidden shadow-sm ring-1 ring-gray-200 rounded-xl bg-white">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <div className="glass overflow-hidden rounded-3xl">
+                  <table className="min-w-full divide-y divide-white/40">
+                    <thead className="bg-white/30 backdrop-blur-sm">
                       <tr>
                         {tableColumns.map((column) => (
                           <th
@@ -606,14 +574,14 @@ export default function HackathonsPage() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-white/40">
                       {filteredHackathons.map((hackathon) => (
-                        <tr 
-                          key={hackathon.id} 
+                        <tr
+                          key={hackathon.id}
                           className={`transition-colors ${
                             hackathon.is_highlight
-                              ? 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-400'
-                              : 'hover:bg-gray-50'
+                              ? 'bg-yellow-100/40 hover:bg-yellow-100/60 border-l-4 border-yellow-400'
+                              : 'hover:bg-white/40'
                           }`}
                         >
                           {tableColumns.map((column) => (
@@ -661,17 +629,15 @@ export default function HackathonsPage() {
         ) : (
           /* Chronological View */
           <div className="relative">
-            {/* Timeline line */}
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-            
+            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary-300/60 via-white/40 to-primary-300/60"></div>
+
             <div className="space-y-8">
-              {hackathonsByDate.map(({ date, hackathons: dateHackathons }, dateIndex) => (
+              {hackathonsByDate.map(({ date, hackathons: dateHackathons }) => (
                 <div key={date.toISOString()} className="relative flex gap-6">
-                  {/* Date label on the left */}
                   <div className="flex-shrink-0 w-16 text-right pt-1">
                     <div className="sticky top-4">
                       <div className="relative">
-                        <div className="absolute -left-8 top-2 w-4 h-4 bg-white border-2 border-primary-500 rounded-full"></div>
+                        <div className="absolute -left-8 top-2 w-4 h-4 bg-white/80 backdrop-blur-sm border-2 border-primary-500 rounded-full shadow-md"></div>
                         <div className="text-sm font-semibold text-gray-900">
                           {formatDateLabel(date)}
                         </div>
@@ -682,71 +648,59 @@ export default function HackathonsPage() {
                     </div>
                   </div>
 
-                  {/* Hackathons for this date */}
                   <div className="flex-1 space-y-4 pb-8">
                     {dateHackathons.map((hackathon) => (
                       <div
                         key={hackathon.id}
                         onClick={() => handleViewDetails(hackathon)}
-                        className={`group rounded-xl shadow-sm border transition-all duration-200 overflow-hidden cursor-pointer ${
+                        className={`group rounded-3xl backdrop-blur-xl border transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5 ${
                           hackathon.is_highlight
-                            ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 hover:border-yellow-500 hover:shadow-lg ring-2 ring-yellow-200 ring-opacity-50'
-                            : 'bg-white border-gray-200 hover:shadow-md hover:border-primary-300'
+                            ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-md shadow-yellow-200/30'
+                            : 'glass hover:shadow-lg hover:bg-white/70'
                         }`}
                       >
                         <div className="p-6">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
-                              {/* Time */}
                               {hackathon.start_time && (
                                 <div className="text-sm font-medium text-gray-900 mb-2">
                                   {hackathon.start_time}
                                 </div>
                               )}
-                              
-                              {/* Title */}
+
                               <div className="flex items-center gap-2 mb-2">
                                 <h3 className="text-lg font-bold text-gray-900">
                                   {hackathon.name || hackathon.title}
                                 </h3>
-                                {hackathon.is_highlight && (
-                                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    ⭐ Highlight
-                                  </span>
-                                )}
+                                {hackathon.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                               </div>
-                              
-                              {/* Organisers */}
+
                               {hackathon.organisers && (
                                 <p className="text-sm text-gray-600 mb-3">
                                   By {hackathon.organisers}
                                 </p>
                               )}
-                              
-                              {/* Location */}
+
                               {hackathon.location && (
                                 <p className="text-sm text-gray-600 mb-3">
                                   {hackathon.location}
                                 </p>
                               )}
-                              
-                              {/* Prizes */}
+
                               {hackathon.prizes && (
                                 <p className="text-sm text-gray-600 mb-3">
                                   Prizes: {hackathon.prizes}
                                 </p>
                               )}
-                              
-                              {/* Description */}
+
                               {hackathon.description && (
                                 <p className="text-sm text-gray-500 line-clamp-2">
                                   {hackathon.description}
                                 </p>
                               )}
                             </div>
-                            
-                            {/* Hackathon image/logo placeholder */}
-                            <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+
+                            <div className="flex-shrink-0 w-24 h-24 bg-white/40 backdrop-blur-sm rounded-2xl flex items-center justify-center ring-1 ring-white/40">
                               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                               </svg>
@@ -813,6 +767,18 @@ export default function HackathonsPage() {
           title={editingHackathon ? 'Edit Hackathon' : 'Add Hackathon'}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={linkedInConfirmOpen}
+        title="Generate Hackathons LinkedIn Draft"
+        info="The next 3 highlighted hackathons with the closest start dates will be included in the post."
+        checklist={[
+          'Have you highlighted the hackathons you want featured in the post?',
+        ]}
+        confirmLabel="Yes, generate draft"
+        onConfirm={confirmLinkedInPost}
+        onCancel={() => setLinkedInConfirmOpen(false)}
+      />
     </Layout>
   )
 }

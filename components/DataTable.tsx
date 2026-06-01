@@ -39,7 +39,7 @@ export default function DataTable({
             <button
               type="button"
               onClick={onAdd}
-              className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
+              className="block rounded-xl bg-primary-600/90 backdrop-blur-sm px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-all"
             >
               {addLabel}
             </button>
@@ -49,9 +49,9 @@ export default function DataTable({
       <div className="mt-8 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow-sm ring-1 ring-gray-200 rounded-xl bg-white">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="glass overflow-hidden rounded-3xl">
+              <table className="min-w-full divide-y divide-white/40">
+                <thead className="bg-white/30 backdrop-blur-sm">
                   <tr>
                     {columns.map((column) => (
                       <th
@@ -69,7 +69,7 @@ export default function DataTable({
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="divide-y divide-white/40">
                   {data.length === 0 ? (
                     <tr>
                       <td
@@ -81,7 +81,7 @@ export default function DataTable({
                     </tr>
                   ) : (
                     data.map((row, idx) => (
-                      <tr key={row.id || idx} className="hover:bg-gray-50 transition-colors">
+                      <tr key={row.id || idx} className="hover:bg-white/40 transition-colors">
                         {columns.map((column) => (
                           <td
                             key={column.key}

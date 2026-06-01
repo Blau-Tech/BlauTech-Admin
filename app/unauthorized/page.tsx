@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import GlassCard from '@/components/ui/GlassCard'
 
 export default function UnauthorizedPage() {
   const router = useRouter()
@@ -12,20 +13,19 @@ export default function UnauthorizedPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white">
-      <div className="max-w-md w-full space-y-8 p-10 bg-white rounded-xl shadow-xl border border-gray-100 text-center">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <GlassCard variant="strong" className="max-w-md w-full space-y-8 p-10 text-center">
         <h1 className="text-3xl font-bold text-gray-900">Access Denied</h1>
         <p className="text-gray-600">
           You don&apos;t have admin privileges to access this panel.
         </p>
         <button
           onClick={handleSignOut}
-          className="w-full py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm"
+          className="w-full py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600/90 backdrop-blur-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all shadow-sm"
         >
           Sign Out
         </button>
-      </div>
+      </GlassCard>
     </div>
   )
 }
-

@@ -1,98 +1,87 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import FormSection from './ui/FormSection'
 import FormActions from './ui/FormActions'
 import ErrorBanner from './ui/ErrorBanner'
 import MultiSelect from './ui/MultiSelect'
-import { TextField, TextareaField, CheckboxField } from './ui/FormField'
+import { TextField, TextareaField, SelectField, CheckboxField } from './ui/FormField'
 
+type OpportunityType = 'PROGRAM' | 'FELLOWSHIP'
 type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
 
 const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID']
-const STUDY_LEVEL_OPTIONS = ['Bachelor', 'Masters', 'PhD', 'MBA', 'Postdoc']
-const FIELD_OPTIONS = ['Computer Science', 'Business', 'Engineering', 'AI', 'Robotics', 'Medicine', 'Law', 'Other']
 
-interface ScholarshipFormData {
+interface OpportunityFormData {
+  opportunity_type: OpportunityType
   title: string
   organisation: string
   description: string
   url: string
   deadline?: string
-  eligibility_notes?: string
   posted_linkedin?: boolean
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
   is_highlight?: boolean
 }
 
-interface ScholarshipFormProps {
+interface OpportunityFormProps {
   initialData?: any
   onSubmit: (data: any) => Promise<void>
   onCancel: () => void
   title: string
 }
 
-const FLAGS: { id: keyof ScholarshipFormData; label: string }[] = [
+const FLAGS: { id: keyof OpportunityFormData; label: string }[] = [
   { id: 'posted_linkedin', label: 'Posted on LinkedIn' },
   { id: 'posted_whatsapp', label: 'Posted on WhatsApp' },
   { id: 'posted_newsletter', label: 'Posted in Newsletter' },
-  { id: 'is_highlight', label: 'Highlight Scholarship' },
+  { id: 'is_highlight', label: 'Highlight Opportunity' },
 ]
 
-export default function ScholarshipForm({ initialData, onSubmit, onCancel }: ScholarshipFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<ScholarshipFormData>({ mode: 'onChange' })
+export default function OpportunityForm({ initialData, onSubmit, onCancel }: OpportunityFormProps) {
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<OpportunityFormData>({
+    mode: 'onChange',
+  })
 
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
-
   const [cities, setCities] = useState<string[]>([])
-  const [studyLevel, setStudyLevel] = useState<string[]>([])
-  const [fieldsOfStudy, setFieldsOfStudy] = useState<string[]>([])
 
   useEffect(() => {
     if (initialData) {
       reset({
+        opportunity_type: (initialData.opportunity_type as OpportunityType) || 'PROGRAM',
         title: initialData.title || '',
         organisation: initialData.organisation || '',
         description: initialData.description || '',
         url: initialData.url || '',
         deadline: initialData.deadline || '',
-        eligibility_notes: initialData.eligibility_notes || '',
         posted_linkedin: initialData.posted_linkedin || false,
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
         is_highlight: initialData.is_highlight || false,
       })
       setCities(Array.isArray(initialData.cities) ? initialData.cities : [])
-      setStudyLevel(Array.isArray(initialData.study_level) ? initialData.study_level : [])
-      setFieldsOfStudy(Array.isArray(initialData.fields_of_study) ? initialData.fields_of_study : [])
     } else {
       reset({
+        opportunity_type: 'PROGRAM',
         title: '',
         organisation: '',
         description: '',
         url: '',
         deadline: '',
-        eligibility_notes: '',
         posted_linkedin: false,
         posted_whatsapp: false,
         posted_newsletter: false,
         is_highlight: false,
       })
       setCities([])
-      setStudyLevel([])
-      setFieldsOfStudy([])
     }
   }, [initialData, reset])
 
-  const onSubmitForm = async (data: ScholarshipFormData) => {
+  const onSubmitForm = async (data: OpportunityFormData) => {
     setFormError('')
     setLoading(true)
 
@@ -105,16 +94,14 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         }
       }
 
-      const payload = {
+      const payload: any = {
+        opportunity_type: data.opportunity_type,
         title: data.title.trim(),
         organisation: data.organisation.trim(),
         description: data.description.trim(),
         url: data.url.trim(),
         deadline: data.deadline?.trim() ? data.deadline : null,
-        eligibility_notes: data.eligibility_notes?.trim() ? data.eligibility_notes : null,
         cities,
-        study_level: studyLevel,
-        fields_of_study: fieldsOfStudy,
         posted_linkedin: !!data.posted_linkedin,
         posted_whatsapp: !!data.posted_whatsapp,
         posted_newsletter: !!data.posted_newsletter,
@@ -124,7 +111,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
       await onSubmit(payload)
     } catch (err: any) {
       console.error('Form submission error:', err)
-      setFormError(err.message || 'An error occurred while saving the scholarship. Please try again.')
+      setFormError(err.message || 'An error occurred while saving the opportunity. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -135,6 +122,16 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
       <ErrorBanner message={formError} onClose={() => setFormError('')} />
 
       <FormSection title="Basic Information" first>
+        <SelectField
+          id="opportunity_type"
+          label="Type"
+          required
+          {...register('opportunity_type', { required: 'Type is required' })}
+        >
+          <option value="PROGRAM">Program</option>
+          <option value="FELLOWSHIP">Fellowship</option>
+        </SelectField>
+
         <TextField
           id="title"
           label="Title"
@@ -153,7 +150,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
           id="description"
           label="Description"
           required
-          placeholder="Scholarship description"
+          placeholder="Opportunity description"
           error={errors.description?.message}
           {...register('description', { required: 'Description is required' })}
         />
@@ -164,7 +161,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
             type="url"
             label="URL"
             required
-            placeholder="https://example.com/scholarship"
+            placeholder="https://example.com/opportunity"
             error={errors.url?.message}
             {...register('url', { required: 'URL is required' })}
           />
@@ -177,16 +174,6 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         </div>
 
         <MultiSelect label="Cities" options={CITY_OPTIONS} selected={cities} onChange={setCities} />
-        <MultiSelect label="Study Level" options={STUDY_LEVEL_OPTIONS} selected={studyLevel} onChange={setStudyLevel} />
-        <MultiSelect label="Fields of Study" options={FIELD_OPTIONS} selected={fieldsOfStudy} onChange={setFieldsOfStudy} />
-
-        <TextareaField
-          id="eligibility_notes"
-          label="Eligibility Notes"
-          rows={3}
-          placeholder="Free-text notes about eligibility (e.g. GPA, citizenship, etc.)"
-          {...register('eligibility_notes')}
-        />
       </FormSection>
 
       <FormSection title="Publishing">

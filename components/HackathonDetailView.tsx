@@ -1,6 +1,8 @@
 'use client'
 
 import { format } from 'date-fns'
+import Badge from './ui/Badge'
+import InfoRow from './ui/InfoRow'
 
 interface HackathonDetailViewProps {
   hackathon: any
@@ -9,46 +11,27 @@ interface HackathonDetailViewProps {
   onClose: () => void
 }
 
+const calendarIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+)
+
 export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClose }: HackathonDetailViewProps) {
-  const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) => (
-    <div className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0">
-      <div className="text-gray-400 mt-0.5 flex-shrink-0">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-        <div className="text-sm text-gray-900">{value}</div>
-      </div>
-    </div>
-  )
-
-  const calendarIcon = (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  )
-
   return (
     <div className="max-h-[85vh] overflow-y-auto">
-      {/* Header */}
-      <div className="border-b border-gray-200 pb-6 mb-6">
+      <div className="border-b border-white/40 pb-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-gray-900 mb-3">{hackathon.name || hackathon.title}</h2>
             <div className="flex items-center gap-2 flex-wrap">
-              {hackathon.is_highlight && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  Highlight
-                </span>
-              )}
+              {hackathon.is_highlight && <Badge color="yellow">Highlight</Badge>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Details Grid */}
       <div className="space-y-1">
-        {/* Description */}
         {hackathon.description && (
           <InfoRow
             icon={
@@ -61,19 +44,17 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           />
         )}
 
-        {/* Start Date & Time */}
         <InfoRow
           icon={calendarIcon}
           label="Start Date & Time"
           value={
             <p className="font-medium">
               {hackathon.start_date ? format(new Date(hackathon.start_date), 'PP') : '-'}
-              {hackathon.start_time && ` at ${hackathon.start_time}`}
+              {hackathon.start_time && ` at ${hackathon.start_time.slice(0, 5)}`}
             </p>
           }
         />
 
-        {/* End Date & Time */}
         {hackathon.end_date && (
           <InfoRow
             icon={calendarIcon}
@@ -81,13 +62,12 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
             value={
               <p className="font-medium">
                 {format(new Date(hackathon.end_date), 'PP')}
-                {hackathon.end_time && ` at ${hackathon.end_time}`}
+                {hackathon.end_time && ` at ${hackathon.end_time.slice(0, 5)}`}
               </p>
             }
           />
         )}
 
-        {/* Signup Deadline */}
         {hackathon.signup_deadline && (
           <InfoRow
             icon={
@@ -100,7 +80,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           />
         )}
 
-        {/* Prizes */}
         {hackathon.prizes && (
           <InfoRow
             icon={
@@ -113,7 +92,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           />
         )}
 
-        {/* Location */}
         {hackathon.location && (
           <InfoRow
             icon={
@@ -127,7 +105,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           />
         )}
 
-        {/* Link */}
         {hackathon.link && (
           <InfoRow
             icon={
@@ -153,7 +130,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           />
         )}
 
-        {/* Organisers */}
         {hackathon.organisers && (
           <InfoRow
             icon={
@@ -166,7 +142,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
           />
         )}
 
-        {/* Social Media Posting Status */}
         {(hackathon.posted_linkedin || hackathon.posted_whatsapp || hackathon.posted_newsletter) && (
           <InfoRow
             icon={
@@ -177,27 +152,14 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
             label="Social Media Posting"
             value={
               <div className="flex flex-wrap gap-2">
-                {hackathon.posted_linkedin && (
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                    LinkedIn
-                  </span>
-                )}
-                {hackathon.posted_whatsapp && (
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                    WhatsApp
-                  </span>
-                )}
-                {hackathon.posted_newsletter && (
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                    Newsletter
-                  </span>
-                )}
+                {hackathon.posted_linkedin && <Badge color="blue" size="sm">LinkedIn</Badge>}
+                {hackathon.posted_whatsapp && <Badge color="green" size="sm">WhatsApp</Badge>}
+                {hackathon.posted_newsletter && <Badge color="purple" size="sm">Newsletter</Badge>}
               </div>
             }
           />
         )}
 
-        {/* Metadata */}
         <InfoRow
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,23 +178,22 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
         />
       </div>
 
-      {/* Actions */}
-      <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-end gap-3">
+      <div className="mt-8 pt-6 border-t border-white/40 flex items-center justify-end gap-3">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl hover:bg-white/70 transition-all"
         >
           Close
         </button>
         <button
           onClick={onEdit}
-          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-white bg-primary-600/90 backdrop-blur-sm rounded-xl hover:bg-primary-700 transition-all"
         >
           Edit Hackathon
         </button>
         <button
           onClick={onDelete}
-          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-white bg-red-600/90 backdrop-blur-sm rounded-xl hover:bg-red-700 transition-all"
         >
           Delete Hackathon
         </button>
