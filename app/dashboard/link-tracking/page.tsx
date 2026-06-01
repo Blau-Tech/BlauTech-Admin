@@ -30,6 +30,7 @@ export default function LinkTrackingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filterChannel, setFilterChannel] = useState<Channel | 'ALL'>('ALL')
+  const [filterCity, setFilterCity] = useState<string>('ALL')
   const [sortBy, setSortBy] = useState<string>('total_desc')
 
   useEffect(() => {
@@ -55,17 +56,38 @@ export default function LinkTrackingPage() {
     }
   }
 
+  // Unique cities available in the loaded data (for the city filter dropdown)
+  const availableCities = useMemo(() => {
+    const set = new Set<string>()
+    trackedLinks.forEach((l) => {
+      if (l.event_city) set.add(l.event_city)
+    })
+    return Array.from(set).sort()
+  }, [trackedLinks])
+
+  // Apply city filter on top of the already-fetched (and city-lead-scoped) data
+  const cityFilteredLinks = useMemo(() => {
+    if (filterCity === 'ALL') return trackedLinks
+    return trackedLinks.filter((l) => l.event_city === filterCity)
+  }, [trackedLinks, filterCity])
+
+  // Total clicks respecting the active city filter
+  const displayedTotalClicks = useMemo(() => {
+    if (filterCity === 'ALL') return totalClicks
+    return cityFilteredLinks.reduce((sum, l) => sum + l.click_count, 0)
+  }, [cityFilteredLinks, filterCity, totalClicks])
+
   // Aggregate clicks by channel
   const channelTotals = useMemo(() => {
     const totals: Record<string, number> = {}
-    trackedLinks.forEach((l) => {
+    cityFilteredLinks.forEach((l) => {
       totals[l.channel] = (totals[l.channel] || 0) + l.click_count
     })
     return ALL_CHANNELS
       .filter((c) => totals[c] !== undefined)
       .map((channel) => ({ channel, clicks: totals[channel] || 0 }))
       .sort((a, b) => b.clicks - a.clicks)
-  }, [trackedLinks])
+  }, [cityFilteredLinks])
 
   // Aggregate clicks by event city (super-admin comparison view only)
   const cityTotals = useMemo(() => {
@@ -89,7 +111,7 @@ export default function LinkTrackingPage() {
       created_at: string
     }>()
 
-    trackedLinks.forEach((link) => {
+    cityFilteredLinks.forEach((link) => {
       const key = link.event_id
       if (!map.has(key)) {
         map.set(key, {
@@ -136,7 +158,7 @@ export default function LinkTrackingPage() {
     }
 
     return items
-  }, [trackedLinks, filterChannel, sortBy])
+  }, [cityFilteredLinks, filterChannel, sortBy])
 
   if (loading) {
     return (
@@ -158,36 +180,70 @@ export default function LinkTrackingPage() {
 
         {error && <ErrorBanner message={error} onClose={() => setError('')} className="mb-6" />}
 
+        {/* City filter — super-admins only */}
+        {!isCityLead && availableCities.length > 1 && (
+          <div className="flex items-center gap-3 mb-6">
+            <label className="text-sm font-medium text-gray-700">Filter by city:</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterCity('ALL')}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
+                  filterCity === 'ALL'
+                    ? 'bg-primary-100/80 text-primary-800 ring-2 ring-primary-300/60 shadow-sm'
+                    : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
+                }`}
+              >
+                All cities
+              </button>
+              {availableCities.map((city) => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => setFilterCity(city)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
+                    filterCity === city
+                      ? 'bg-primary-100/80 text-primary-800 ring-2 ring-primary-300/60 shadow-sm'
+                      : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
+                  }`}
+                >
+                  {city.charAt(0) + city.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Summary cards */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5 mb-8">
           <GlassCard className="p-6">
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Clicks</p>
-            <p className="text-4xl font-bold text-gray-900">{totalClicks}</p>
+            <p className="text-4xl font-bold text-gray-900">{displayedTotalClicks}</p>
             <p className="text-sm text-gray-500 mt-2">All time</p>
           </GlassCard>
 
           {channelTotals.map(({ channel, clicks }) => {
             const config = CHANNEL_CONFIG[channel as Channel]
             if (!config) {
-              return (
-                <GlassCard key={channel} className="p-6">
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{channel}</p>
-                  <p className="text-4xl font-bold text-gray-900">{clicks}</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    {totalClicks > 0 ? `${Math.round((clicks / totalClicks) * 100)}% of total` : 'No clicks yet'}
-                  </p>
-                </GlassCard>
-              )
-            }
             return (
-              <div key={channel} className={`rounded-3xl p-6 border border-white/50 backdrop-blur-xl bg-gradient-to-br ${config.gradient} shadow-sm`}>
-                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">{config.label}</p>
+              <GlassCard key={channel} className="p-6">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{channel}</p>
                 <p className="text-4xl font-bold text-gray-900">{clicks}</p>
                 <p className="text-sm text-gray-500 mt-2">
-                  {totalClicks > 0 ? `${Math.round((clicks / totalClicks) * 100)}% of total` : 'No clicks yet'}
+                  {displayedTotalClicks > 0 ? `${Math.round((clicks / displayedTotalClicks) * 100)}% of total` : 'No clicks yet'}
                 </p>
-              </div>
+              </GlassCard>
             )
+          }
+          return (
+            <div key={channel} className={`rounded-3xl p-6 border border-white/50 backdrop-blur-xl bg-gradient-to-br ${config.gradient} shadow-sm`}>
+              <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">{config.label}</p>
+              <p className="text-4xl font-bold text-gray-900">{clicks}</p>
+              <p className="text-sm text-gray-500 mt-2">
+                {displayedTotalClicks > 0 ? `${Math.round((clicks / displayedTotalClicks) * 100)}% of total` : 'No clicks yet'}
+              </p>
+            </div>
+          )
           })}
         </div>
 
@@ -308,7 +364,7 @@ export default function LinkTrackingPage() {
         {/* Raw tracked links list */}
         <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">All Tracked Links</h2>
-          {trackedLinks.length === 0 ? (
+          {cityFilteredLinks.length === 0 ? (
             <GlassCard className="text-center py-12">
               <p className="text-gray-500">No tracked links yet.</p>
             </GlassCard>
@@ -325,7 +381,7 @@ export default function LinkTrackingPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/40">
-                    {trackedLinks.map((link) => {
+                    {cityFilteredLinks.map((link) => {
                       const config = CHANNEL_CONFIG[link.channel as Channel]
                       return (
                         <tr key={link.id} className="hover:bg-white/40 transition-colors">
