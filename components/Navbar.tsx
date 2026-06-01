@@ -27,6 +27,7 @@ const navigation = [
   { name: 'Scholarships', href: '/dashboard/scholarships' },
   { name: 'Opportunities', href: '/dashboard/opportunities' },
   { name: 'Organisations', href: '/dashboard/organisations' },
+  { name: 'Cities', href: '/dashboard/cities' },
   { name: 'Links', href: '/dashboard/link-tracking' },
 ]
 
