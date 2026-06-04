@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import HackathonForm from '@/components/HackathonForm'
 import HackathonDetailView from '@/components/HackathonDetailView'
+import { toast } from 'sonner'
 import { hackathonsApi, triggerWorkflow } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import GlassCard from '@/components/ui/GlassCard'
@@ -58,14 +59,17 @@ export default function HackathonsPage() {
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
   const confirmLinkedInPost = async () => {
+    const toastId = toast.loading('Generating Hackathons LinkedIn draft…')
     try {
-      setError('')
-      setSuccessMessage('')
       await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
-      setLinkedInConfirmOpen(false)
-      setSuccessMessage('LinkedIn hackathons draft generation started.')
+      toast.success('Hackathons LinkedIn draft generation started!', { id: toastId })
     } catch (err: any) {
-      setError(err.message || 'Failed to start LinkedIn draft generation.')
+      toast.error('Failed to generate Hackathons LinkedIn draft', {
+        id: toastId,
+        description: err.message || 'Something went wrong. Please try again.',
+      })
+    } finally {
+      setLinkedInConfirmOpen(false)
     }
   }
 

@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import EventForm from '@/components/EventForm'
 import EventDetailView from '@/components/EventDetailView'
+import { toast } from 'sonner'
 import { eventsApi, triggerWorkflow } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { Input } from '@/components/ui/input'
@@ -73,14 +74,17 @@ export default function EventsPage() {
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
   const confirmLinkedInPost = async () => {
+    const toastId = toast.loading('Generating Events LinkedIn draft…')
     try {
-      setError('')
-      setSuccessMessage('')
       await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
-      setLinkedInConfirmOpen(false)
-      setSuccessMessage('LinkedIn events draft generation started.')
+      toast.success('Events LinkedIn draft generation started!', { id: toastId })
     } catch (err: any) {
-      setError(err.message || 'Failed to start LinkedIn draft generation.')
+      toast.error('Failed to generate Events LinkedIn draft', {
+        id: toastId,
+        description: err.message || 'Something went wrong. Please try again.',
+      })
+    } finally {
+      setLinkedInConfirmOpen(false)
     }
   }
 

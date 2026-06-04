@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import Calendar from '@/components/Calendar'
@@ -98,13 +99,28 @@ export default function Dashboard() {
   }
 
   const confirmWorkflow = async () => {
-    if (pendingWorkflow === 'events-linkedin') {
-      await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
-    } else if (pendingWorkflow === 'hackathons-linkedin') {
-      await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
-    } else if (pendingWorkflow === 'newsletter') {
-      // Newsletter content is global (highlighted, non city-specific items), so no city payload.
-      await triggerWorkflow('blau-network-newsletter', {})
+    const label =
+      pendingWorkflow === 'events-linkedin' ? 'Events LinkedIn draft' :
+      pendingWorkflow === 'hackathons-linkedin' ? 'Hackathons LinkedIn draft' :
+      'Newsletter draft'
+
+    const toastId = toast.loading(`Generating ${label}…`)
+    try {
+      if (pendingWorkflow === 'events-linkedin') {
+        await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
+      } else if (pendingWorkflow === 'hackathons-linkedin') {
+        await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
+      } else if (pendingWorkflow === 'newsletter') {
+        await triggerWorkflow('blau-network-newsletter', {})
+      }
+      toast.success(`${label} generation started!`, { id: toastId })
+    } catch (err: any) {
+      toast.error(`Failed to generate ${label}`, {
+        id: toastId,
+        description: err.message || 'Something went wrong. Please try again.',
+      })
+    } finally {
+      setPendingWorkflow(null)
     }
   }
 
