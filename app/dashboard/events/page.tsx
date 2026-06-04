@@ -20,7 +20,7 @@ import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 type ViewMode = 'card' | 'table' | 'chronological'
 
 export default function EventsPage() {
-  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
   const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,6 +35,8 @@ export default function EventsPage() {
   const [sortAscending, setSortAscending] = useState(true) // true = earliest first, false = latest first
   const [hidePastEvents, setHidePastEvents] = useState(true)
   
+  const [selectedCity, setSelectedCity] = useState<string | null>(null)
+
   // Boolean filters - when true, show only events where that attribute is NOT set
   const [filterNotHighlighted, setFilterNotHighlighted] = useState(false)
   const [filterNotLinkedIn, setFilterNotLinkedIn] = useState(false)
@@ -260,6 +262,11 @@ export default function EventsPage() {
   const filteredEvents = useMemo(() => {
     let filtered = [...events]
 
+    // City filter (admin only — city leads already see city-scoped data)
+    if (selectedCity) {
+      filtered = filtered.filter((event) => event.city === selectedCity)
+    }
+
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
@@ -302,7 +309,7 @@ export default function EventsPage() {
     }
 
     return filtered
-  }, [events, searchQuery, hidePastEvents, filterNotHighlighted, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
+  }, [events, searchQuery, selectedCity, hidePastEvents, filterNotHighlighted, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
 
   const sortedFilteredEvents = useMemo(() => {
     const sorted = [...filteredEvents].sort(compareEventsByDateTime)
@@ -498,6 +505,25 @@ export default function EventsPage() {
 
         {/* Filters */}
         <div className="mb-6">
+          {isAdmin && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="text-sm font-medium text-gray-700">City:</span>
+              {(['MUNICH', 'BERLIN', 'MADRID'] as const).map((city) => (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => setSelectedCity(selectedCity === city ? null : city)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
+                    selectedCity === city
+                      ? 'bg-indigo-100/80 text-indigo-800 ring-2 ring-indigo-300/60 shadow-sm'
+                      : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
+                  }`}
+                >
+                  {city.charAt(0) + city.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="text-sm font-medium text-gray-700">Sort:</span>
             <button
@@ -587,7 +613,7 @@ export default function EventsPage() {
               </svg>
               Not in Newsletter
             </button>
-            {(filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents) && (
+            {(filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents || selectedCity) && (
               <button
                 type="button"
                 onClick={() => {
@@ -596,6 +622,7 @@ export default function EventsPage() {
                   setFilterNotWhatsApp(false)
                   setFilterNotNewsletter(false)
                   setHidePastEvents(false)
+                  setSelectedCity(null)
                 }}
                 className="inline-flex items-center gap-1 px-2 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700"
               >
@@ -616,7 +643,7 @@ export default function EventsPage() {
                 ? 'No events available'
                 : 'No events match your search criteria or filters'}
             </p>
-            {(searchQuery || filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents) && (
+            {(searchQuery || filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents || selectedCity) && (
               <button
                 onClick={() => {
                   setSearchQuery('')
@@ -625,6 +652,7 @@ export default function EventsPage() {
                   setFilterNotWhatsApp(false)
                   setFilterNotNewsletter(false)
                   setHidePastEvents(false)
+                  setSelectedCity(null)
                 }}
                 className="mt-4 text-sm text-primary-600 hover:text-primary-800 font-medium"
               >

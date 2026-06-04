@@ -68,7 +68,7 @@ const typeBadgeColor = (type: OrganisationType): BadgeColor => {
 }
 
 export default function OrganisationsPage() {
-  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
   const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [organisations, setOrganisations] = useState<Organisation[]>([])
   const [loading, setLoading] = useState(true)
@@ -77,6 +77,7 @@ export default function OrganisationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<OrganisationType | 'ALL'>('ALL')
 
+  const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingOrg, setEditingOrg] = useState<Organisation | null>(null)
 
@@ -104,6 +105,10 @@ export default function OrganisationsPage() {
       filtered = filtered.filter((o) => o.type === typeFilter)
     }
 
+    if (selectedCity) {
+      filtered = filtered.filter((o) => o.city === selectedCity)
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       filtered = filtered.filter((org) => {
@@ -125,7 +130,7 @@ export default function OrganisationsPage() {
     }
 
     return filtered
-  }, [organisations, searchQuery, typeFilter])
+  }, [organisations, searchQuery, typeFilter, selectedCity])
 
   const handleAdd = () => {
     setEditingOrg(null)
@@ -204,7 +209,7 @@ export default function OrganisationsPage() {
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap gap-2">
           {TYPE_FILTERS.map((tf) => (
             <button
               key={tf.value}
@@ -220,6 +225,38 @@ export default function OrganisationsPage() {
             </button>
           ))}
         </div>
+
+        {isAdmin && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">City:</span>
+            {(['MUNICH', 'BERLIN', 'MADRID'] as const).map((city) => (
+              <button
+                key={city}
+                type="button"
+                onClick={() => setSelectedCity(selectedCity === city ? null : city)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
+                  selectedCity === city
+                    ? 'bg-indigo-100/80 text-indigo-800 ring-2 ring-indigo-300/60 shadow-sm'
+                    : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
+                }`}
+              >
+                {city.charAt(0) + city.slice(1).toLowerCase()}
+              </button>
+            ))}
+            {selectedCity && (
+              <button
+                type="button"
+                onClick={() => setSelectedCity(null)}
+                className="inline-flex items-center gap-1 px-2 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
 
         <SearchBar
           value={searchQuery}
