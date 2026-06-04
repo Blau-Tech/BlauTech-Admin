@@ -56,7 +56,7 @@ interface StatCard {
 }
 
 export default function Dashboard() {
-  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
   const cityFilter = isCityLead ? userCity ?? undefined : undefined
 
   const [stats, setStats] = useState({
@@ -103,11 +103,8 @@ export default function Dashboard() {
     } else if (pendingWorkflow === 'hackathons-linkedin') {
       await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
     } else if (pendingWorkflow === 'newsletter') {
-      // TODO: define the request URL and body payload
-      await triggerWorkflow('TODO_NEWSLETTER_WORKFLOW_URL', {
-        // TODO: populate with the required fields
-        city: cityFilter,
-      })
+      // Newsletter content is global (highlighted, non city-specific items), so no city payload.
+      await triggerWorkflow('blau-network-newsletter', {})
     }
   }
 
@@ -260,16 +257,18 @@ export default function Dashboard() {
                 </svg>
                 Hackathons — Generate LinkedIn Draft
               </button>
-              <button
-                type="button"
-                onClick={() => setPendingWorkflow('newsletter')}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600/90 to-purple-600/90 backdrop-blur-sm px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-violet-700 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Generate Newsletter Draft
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setPendingWorkflow('newsletter')}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600/90 to-purple-600/90 backdrop-blur-sm px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-violet-700 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Generate Newsletter Draft
+                </button>
+              )}
           </div>
         </div>
 
