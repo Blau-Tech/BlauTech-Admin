@@ -182,6 +182,20 @@ export default function HackathonsPage() {
     return (a?.name || a?.title || '').toString().localeCompare((b?.name || b?.title || '').toString())
   }
 
+  const hackathonsLinkedInPreview = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return hackathons
+      .filter((h: any) =>
+        h.is_highlight &&
+        !h.posted_linkedin &&
+        (!h.signup_deadline || new Date(h.signup_deadline) >= today)
+      )
+      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .slice(0, 3)
+      .map((h: any) => ({ id: h.id, name: h.name || h.title, start_date: h.start_date, city: h.city }))
+  }, [hackathons])
+
   // Filter hackathons based on search
   const filteredHackathons = useMemo(() => {
     let filtered = [...hackathons]
@@ -817,6 +831,8 @@ export default function HackathonsPage() {
         checklist={[
           'Have you highlighted the hackathons you want featured in the post?',
         ]}
+        previewItems={hackathonsLinkedInPreview}
+        previewLabel="Hackathons to be included"
         confirmLabel="Yes, generate draft"
         onConfirm={confirmLinkedInPost}
         onCancel={() => setLinkedInConfirmOpen(false)}

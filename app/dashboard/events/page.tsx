@@ -262,6 +262,20 @@ export default function EventsPage() {
     return (a?.name || '').toString().localeCompare((b?.name || '').toString())
   }
 
+  const eventsLinkedInPreview = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return events
+      .filter((e: any) =>
+        e.is_highlight &&
+        !e.posted_linkedin &&
+        (!e.signup_deadline || new Date(e.signup_deadline) >= today)
+      )
+      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .slice(0, 4)
+      .map((e: any) => ({ id: e.id, name: e.name, start_date: e.start_date, city: e.city }))
+  }, [events])
+
   // Filter events based on search and boolean filters
   const filteredEvents = useMemo(() => {
     let filtered = [...events]
@@ -1026,6 +1040,8 @@ export default function EventsPage() {
         checklist={[
           'Have you highlighted the events you want featured in the post?',
         ]}
+        previewItems={eventsLinkedInPreview}
+        previewLabel="Events to be included"
         confirmLabel="Yes, generate draft"
         onConfirm={confirmLinkedInPost}
         onCancel={() => setLinkedInConfirmOpen(false)}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
@@ -147,6 +147,36 @@ export default function Dashboard() {
       setCalendarLoading(false)
     }
   }
+
+  const today = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
+
+  const eventsLinkedInPreview = useMemo(() => {
+    return calendarEvents
+      .filter((e: any) =>
+        e.is_highlight &&
+        !e.posted_linkedin &&
+        (!e.signup_deadline || new Date(e.signup_deadline) >= today)
+      )
+      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .slice(0, 4)
+      .map((e: any) => ({ id: e.id, name: e.name, start_date: e.start_date, city: e.city }))
+  }, [calendarEvents, today])
+
+  const hackathonsLinkedInPreview = useMemo(() => {
+    return calendarHackathons
+      .filter((h: any) =>
+        h.is_highlight &&
+        !h.posted_linkedin &&
+        (!h.signup_deadline || new Date(h.signup_deadline) >= today)
+      )
+      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .slice(0, 3)
+      .map((h: any) => ({ id: h.id, name: h.name || h.title, start_date: h.start_date, city: h.city }))
+  }, [calendarHackathons, today])
 
   const statCards: StatCard[] = [
     {
@@ -311,6 +341,8 @@ export default function Dashboard() {
         checklist={[
           'Have you highlighted the events you want featured in the post?',
         ]}
+        previewItems={eventsLinkedInPreview}
+        previewLabel="Events to be included"
         confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
         onCancel={() => setPendingWorkflow(null)}
@@ -323,6 +355,8 @@ export default function Dashboard() {
         checklist={[
           'Have you highlighted the hackathons you want featured in the post?',
         ]}
+        previewItems={hackathonsLinkedInPreview}
+        previewLabel="Hackathons to be included"
         confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
         onCancel={() => setPendingWorkflow(null)}
