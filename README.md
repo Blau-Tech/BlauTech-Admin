@@ -4,7 +4,7 @@ A separate admin website for managing BlauTech events, hackathons, scholarships,
 
 ## Features
 
-- 🔐 **Admin-only Authentication**: Only users with admin role can access the panel
+- 🔐 **Protected Authentication**: Full admins and city-scoped city leads can access the panel
 - 📅 **Events Management**: Full CRUD operations for events
 - 💻 **Hackathons Management**: Full CRUD operations for hackathons
 - 🎓 **Scholarships Management**: Full CRUD operations for scholarships
@@ -37,30 +37,28 @@ A separate admin website for managing BlauTech events, hackathons, scholarships,
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
-3. **Set up admin users in Supabase:**
-   
-   You need to set the `role` in the user metadata to `admin` or `super_admin` for users who should have admin access.
-   
-   You can do this in the Supabase dashboard:
-   - Go to Authentication > Users
-   - Edit a user
-   - In the "Raw User Meta Data" section, add:
-     ```json
-     {
-       "role": "admin"
-     }
-     ```
-   
-   Or you can use the Supabase SQL editor to update user metadata:
+3. **Set up authorized users in Supabase:**
+
+   Roles and cities must be stored in protected **App Metadata**, which users cannot edit themselves. Use one of these exact shapes:
+
+   ```json
+   { "role": "admin" }
+   { "role": "super_admin" }
+   { "role": "city_lead", "city": "BERLIN" }
+   ```
+
+   Valid city-lead cities are `MUNICH`, `BERLIN`, and `MADRID`. A city lead with a missing or invalid city is denied access.
+
+   Assign these claims only to accounts you have reviewed. Do not copy values from user-editable metadata. You can edit App Metadata in Authentication > Users, use the Supabase Auth Admin API from a trusted server, or update one reviewed account in the SQL editor:
+
    ```sql
    UPDATE auth.users
-   SET raw_user_meta_data = jsonb_set(
-     COALESCE(raw_user_meta_data, '{}'::jsonb),
-     '{role}',
-     '"admin"'
-   )
-   WHERE email = 'your-admin-email@example.com';
+   SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb)
+     || '{"role":"city_lead","city":"BERLIN"}'::jsonb
+   WHERE email = 'verified-berlin-lead@example.com';
    ```
+
+   After changing claims, the user must sign out and sign back in so their access token contains the new App Metadata.
 
 4. **Run the development server:**
    ```bash
@@ -137,11 +135,13 @@ npm start
 
 ## Security Notes
 
-- Only users with `admin` or `super_admin` role in their user metadata can access the admin panel
-- Make sure to set up Row Level Security (RLS) policies in Supabase to protect your data
+- The Admin UI reads authorization only from protected Supabase Auth App Metadata
+- Database Row Level Security is the actual enforcement layer; UI city filters are only for usability
+- `admin` and `super_admin` can manage every city and global record
+- A `city_lead` can manage only records assigned exactly to their city; global and multi-city records are full-admin only
+- Apply trusted App Metadata to reviewed accounts and refresh their sessions before deploying the city-permission RLS migration
 - Never commit your `.env.local` file to version control
 
 ## License
 
 Private - BlauTech
-
