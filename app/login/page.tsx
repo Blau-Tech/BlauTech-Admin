@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
+import { getAccessClaims } from '@/lib/authorization'
 import GlassCard from '@/components/ui/GlassCard'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 
@@ -40,8 +41,7 @@ export default function LoginPage() {
         return
       }
 
-      const role = data.user?.user_metadata?.role
-      const hasAccess = role === 'admin' || role === 'super_admin' || role === 'city_lead'
+      const { hasAccess } = getAccessClaims(data.user)
 
       if (!hasAccess) {
         await supabase.auth.signOut()

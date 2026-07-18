@@ -8,16 +8,3 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// Check admin status from auth user_metadata
-// (The new Blautech Network schema has no `users` table; roles live in
-// Supabase Auth `user_metadata.role`.)
-export async function checkAdminFromMetadata(): Promise<boolean> {
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    return false
-  }
-
-  return user.user_metadata?.role === 'admin' || user.user_metadata?.role === 'super_admin'
-}
