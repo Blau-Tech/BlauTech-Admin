@@ -19,6 +19,9 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
+type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
+
+const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID']
 
 export default function EventsPage() {
   const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
@@ -44,8 +47,9 @@ export default function EventsPage() {
   const [filterNotWhatsApp, setFilterNotWhatsApp] = useState(false)
   const [filterNotNewsletter, setFilterNotNewsletter] = useState(false)
 
-  // Link form (POST source + link; source is sent internally)
+  // Link form (POST source, link, and routing city)
   const [linkUrl, setLinkUrl] = useState('')
+  const [linkCity, setLinkCity] = useState<CityName | ''>('')
   const [linkSubmitting, setLinkSubmitting] = useState(false)
   const [linkMessage, setLinkMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
@@ -179,6 +183,13 @@ export default function EventsPage() {
       setLinkMessage({ type: 'error', text: 'Please enter a link.' })
       return
     }
+
+    const city = isCityLead ? userCity?.trim().toUpperCase() : linkCity
+    if (!city || !CITY_OPTIONS.includes(city as CityName)) {
+      setLinkMessage({ type: 'error', text: 'Please select a valid city.' })
+      return
+    }
+
     try {
       setLinkSubmitting(true)
       // TODO: Adjust the exact n8n url + path
@@ -187,15 +198,17 @@ export default function EventsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           source: 'admin',
-          link: linkUrl.trim() 
+          event_link: linkUrl.trim(),
+          city,
         }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.message || res.statusText || 'Request failed')
+        throw new Error(data.error || data.message || res.statusText || 'Request failed')
       }
       setLinkMessage({ type: 'success', text: 'Link submitted successfully.' })
       setLinkUrl('')
+      if (isAdmin) setLinkCity('')
     } catch (err: any) {
       setLinkMessage({ type: 'error', text: err.message || 'Failed to submit link.' })
     } finally {
@@ -499,6 +512,28 @@ export default function EventsPage() {
               disabled={linkSubmitting}
               className="flex-1 min-w-[200px]"
             />
+            {isAdmin && (
+              <select
+                id="link-city"
+                aria-label="Submission city"
+                value={linkCity}
+                onChange={(e) => setLinkCity(e.target.value as CityName | '')}
+                disabled={linkSubmitting}
+                className="rounded-xl glass-input px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500"
+              >
+                <option value="">Select city…</option>
+                {CITY_OPTIONS.map((city) => (
+                  <option key={city} value={city}>
+                    {city.charAt(0) + city.slice(1).toLowerCase()}
+                  </option>
+                ))}
+              </select>
+            )}
+            {isCityLead && (
+              <span className="rounded-xl glass-input px-4 py-2.5 text-sm text-gray-700">
+                City: {userCity || 'Not assigned'}
+              </span>
+            )}
             <button
               type="submit"
               disabled={linkSubmitting}
@@ -1049,4 +1084,3 @@ export default function EventsPage() {
     </Layout>
   )
 }
-
