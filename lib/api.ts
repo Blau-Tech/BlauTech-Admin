@@ -440,10 +440,18 @@ export const linkTrackingApi = {
  */
 export async function triggerWorkflow(path: string, payload: unknown = {}): Promise<void> {
   const url = `/api/workflows/${path.replace(/^\/+/, '')}`
+  const { data: { session }, error } = await supabase.auth.getSession()
+
+  if (error || !session?.access_token) {
+    throw new Error('Not authenticated. Please log in again.')
+  }
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(payload),
   })
 

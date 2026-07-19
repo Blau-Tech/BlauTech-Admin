@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import {
+  authorizeWorkflowRequest,
+  getAccessClaims,
+  isAllowedWorkflowPath,
+} from '@/lib/authorization'
 
 type RouteContext = {
   params: Promise<{
@@ -7,25 +13,60 @@ type RouteContext = {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const baseUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL
+  const { path } = await context.params
+  const webhookPath = path.join('/')
 
-  if (!baseUrl) {
+  if (!isAllowedWorkflowPath(webhookPath)) {
+    return NextResponse.json({ message: 'Workflow not found.' }, { status: 404 })
+  }
+
+  const authorization = request.headers.get('Authorization')
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim()
+
+  if (!token) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 })
+  }
+
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+
+  if (error || !user) {
+    return NextResponse.json({ message: 'Invalid or expired session.' }, { status: 401 })
+  }
+
+  let payload: unknown
+
+  try {
+    payload = await request.json()
+  } catch {
+    return NextResponse.json({ message: 'Request body must be valid JSON.' }, { status: 400 })
+  }
+
+  const decision = authorizeWorkflowRequest(webhookPath, payload, getAccessClaims(user))
+
+  if (!decision.allowed) {
+    return NextResponse.json({ message: decision.message }, { status: decision.status })
+  }
+
+  const baseUrl = process.env.N8N_ADMIN_WEBHOOK_URL
+  const webhookSecret = process.env.N8N_ADMIN_WEBHOOK_SECRET
+
+  if (!baseUrl || !webhookSecret) {
     return NextResponse.json(
-      { message: 'n8n webhook base URL is not configured.' },
+      { message: 'n8n Admin webhook is not configured.' },
       { status: 500 }
     )
   }
 
-  const { path } = await context.params
-  const webhookPath = path.join('/')
   const url = new URL(webhookPath, `${baseUrl.replace(/\/+$/, '')}/`)
-  const body = await request.text()
 
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': request.headers.get('Content-Type') || 'application/json' },
-      body,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Blau-Admin-Secret': webhookSecret,
+      },
+      body: JSON.stringify(payload),
     })
 
     const responseText = await response.text()

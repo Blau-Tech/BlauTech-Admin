@@ -16,6 +16,8 @@ import {
   triggerWorkflow,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { resolveWorkflowCity, type CityCode } from '@/lib/authorization'
+import { format } from 'date-fns'
 
 const CalendarIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,6 +75,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [calendarLoading, setCalendarLoading] = useState(true)
   const [pendingWorkflow, setPendingWorkflow] = useState<'events-linkedin' | 'hackathons-linkedin' | 'newsletter' | null>(null)
+  const [selectedWorkflowCity, setSelectedWorkflowCity] = useState<CityCode | null>(null)
+  const workflowCity = resolveWorkflowCity(isCityLead, userCity, selectedWorkflowCity)
 
   useEffect(() => {
     if (authLoading) return
@@ -104,12 +108,17 @@ export default function Dashboard() {
       pendingWorkflow === 'hackathons-linkedin' ? 'Hackathons LinkedIn draft' :
       'Newsletter draft'
 
+    if (pendingWorkflow !== 'newsletter' && !workflowCity) {
+      toast.error('Please select a city.')
+      return
+    }
+
     const toastId = toast.loading(`Generating ${label}…`)
     try {
       if (pendingWorkflow === 'events-linkedin') {
-        await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
+        await triggerWorkflow('blau-network-linkedin-events', workflowCity)
       } else if (pendingWorkflow === 'hackathons-linkedin') {
-        await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
+        await triggerWorkflow('blau-network-linkedin-hackathons', workflowCity)
       } else if (pendingWorkflow === 'newsletter') {
         await triggerWorkflow('blau-network-newsletter', {})
       }
@@ -121,6 +130,7 @@ export default function Dashboard() {
       })
     } finally {
       setPendingWorkflow(null)
+      setSelectedWorkflowCity(null)
     }
   }
 
@@ -148,35 +158,33 @@ export default function Dashboard() {
     }
   }
 
-  const today = useMemo(() => {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    return d
-  }, [])
+  const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
 
   const eventsLinkedInPreview = useMemo(() => {
     return calendarEvents
       .filter((e: any) =>
+        e.city === workflowCity &&
         e.is_highlight &&
         !e.posted_linkedin &&
-        (!e.signup_deadline || new Date(e.signup_deadline) >= today)
+        e.start_date?.slice(0, 10) > today
       )
       .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
       .slice(0, 4)
       .map((e: any) => ({ id: e.id, name: e.name, start_date: e.start_date, city: e.city }))
-  }, [calendarEvents, today])
+  }, [calendarEvents, today, workflowCity])
 
   const hackathonsLinkedInPreview = useMemo(() => {
     return calendarHackathons
       .filter((h: any) =>
+        h.city === workflowCity &&
         h.is_highlight &&
         !h.posted_linkedin &&
-        (!h.signup_deadline || new Date(h.signup_deadline) >= today)
+        h.start_date?.slice(0, 10) > today
       )
       .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
       .slice(0, 3)
       .map((h: any) => ({ id: h.id, name: h.name || h.title, start_date: h.start_date, city: h.city }))
-  }, [calendarHackathons, today])
+  }, [calendarHackathons, today, workflowCity])
 
   const statCards: StatCard[] = [
     {
@@ -341,11 +349,16 @@ export default function Dashboard() {
         checklist={[
           'Have you highlighted the events you want featured in the post?',
         ]}
-        previewItems={eventsLinkedInPreview}
+        previewItems={workflowCity ? eventsLinkedInPreview : undefined}
         previewLabel="Events to be included"
+        city={workflowCity}
+        onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
-        onCancel={() => setPendingWorkflow(null)}
+        onCancel={() => {
+          setPendingWorkflow(null)
+          setSelectedWorkflowCity(null)
+        }}
       />
 
       <ConfirmModal
@@ -355,11 +368,16 @@ export default function Dashboard() {
         checklist={[
           'Have you highlighted the hackathons you want featured in the post?',
         ]}
-        previewItems={hackathonsLinkedInPreview}
+        previewItems={workflowCity ? hackathonsLinkedInPreview : undefined}
         previewLabel="Hackathons to be included"
+        city={workflowCity}
+        onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
-        onCancel={() => setPendingWorkflow(null)}
+        onCancel={() => {
+          setPendingWorkflow(null)
+          setSelectedWorkflowCity(null)
+        }}
       />
 
       <ConfirmModal

@@ -8,6 +8,7 @@ import EventDetailView from '@/components/EventDetailView'
 import { toast } from 'sonner'
 import { eventsApi, triggerWorkflow } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { resolveWorkflowCity, type CityCode } from '@/lib/authorization'
 import { Input } from '@/components/ui/input'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -19,9 +20,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
-type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
-
-const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID']
+const CITY_OPTIONS: CityCode[] = ['MUNICH', 'BERLIN', 'MADRID']
 
 export default function EventsPage() {
   const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
@@ -39,7 +38,9 @@ export default function EventsPage() {
   const [sortAscending, setSortAscending] = useState(true) // true = earliest first, false = latest first
   const [hidePastEvents, setHidePastEvents] = useState(true)
   
-  const [selectedCity, setSelectedCity] = useState<string | null>(null)
+  const [selectedCity, setSelectedCity] = useState<CityCode | null>(null)
+  const [selectedWorkflowCity, setSelectedWorkflowCity] = useState<CityCode | null>(null)
+  const workflowCity = resolveWorkflowCity(isCityLead, userCity, selectedWorkflowCity)
 
   // Boolean filters - when true, show only events where that attribute is NOT set
   const [filterNotHighlighted, setFilterNotHighlighted] = useState(false)
@@ -49,7 +50,7 @@ export default function EventsPage() {
 
   // Link form (POST source, link, and routing city)
   const [linkUrl, setLinkUrl] = useState('')
-  const [linkCity, setLinkCity] = useState<CityName | ''>('')
+  const [linkCity, setLinkCity] = useState<CityCode | ''>('')
   const [linkSubmitting, setLinkSubmitting] = useState(false)
   const [linkMessage, setLinkMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
@@ -78,9 +79,14 @@ export default function EventsPage() {
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
   const confirmLinkedInPost = async () => {
+    if (!workflowCity) {
+      toast.error('Please select a city.')
+      return
+    }
+
     const toastId = toast.loading('Generating Events LinkedIn draft…')
     try {
-      await triggerWorkflow('blau-network-linkedin-events', (userCity || '').toUpperCase())
+      await triggerWorkflow('blau-network-linkedin-events', workflowCity)
       toast.success('Events LinkedIn draft generation started!', { id: toastId })
     } catch (err: any) {
       toast.error('Failed to generate Events LinkedIn draft', {
@@ -89,6 +95,7 @@ export default function EventsPage() {
       })
     } finally {
       setLinkedInConfirmOpen(false)
+      setSelectedWorkflowCity(null)
     }
   }
 
@@ -175,7 +182,7 @@ export default function EventsPage() {
 
   const handleSubmitLink = async (e: React.FormEvent) => {
 
-    const url = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
+    const url = process.env.NEXT_PUBLIC_N8N_EVENT_INTAKE_URL
 
     e.preventDefault()
     setLinkMessage(null)
@@ -183,17 +190,20 @@ export default function EventsPage() {
       setLinkMessage({ type: 'error', text: 'Please enter a link.' })
       return
     }
+    if (!url) {
+      setLinkMessage({ type: 'error', text: 'Event link intake is not configured.' })
+      return
+    }
 
     const city = isCityLead ? userCity?.trim().toUpperCase() : linkCity
-    if (!city || !CITY_OPTIONS.includes(city as CityName)) {
+    if (!city || !CITY_OPTIONS.includes(city as CityCode)) {
       setLinkMessage({ type: 'error', text: 'Please select a valid city.' })
       return
     }
 
     try {
       setLinkSubmitting(true)
-      // TODO: Adjust the exact n8n url + path
-      const res = await fetch(url + '', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -276,18 +286,18 @@ export default function EventsPage() {
   }
 
   const eventsLinkedInPreview = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = format(new Date(), 'yyyy-MM-dd')
     return events
       .filter((e: any) =>
+        e.city === workflowCity &&
         e.is_highlight &&
         !e.posted_linkedin &&
-        (!e.signup_deadline || new Date(e.signup_deadline) >= today)
+        e.start_date?.slice(0, 10) > today
       )
       .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
       .slice(0, 4)
       .map((e: any) => ({ id: e.id, name: e.name, start_date: e.start_date, city: e.city }))
-  }, [events])
+  }, [events, workflowCity])
 
   // Filter events based on search and boolean filters
   const filteredEvents = useMemo(() => {
@@ -517,7 +527,7 @@ export default function EventsPage() {
                 id="link-city"
                 aria-label="Submission city"
                 value={linkCity}
-                onChange={(e) => setLinkCity(e.target.value as CityName | '')}
+                onChange={(e) => setLinkCity(e.target.value as CityCode | '')}
                 disabled={linkSubmitting}
                 className="rounded-xl glass-input px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500"
               >
@@ -1075,11 +1085,16 @@ export default function EventsPage() {
         checklist={[
           'Have you highlighted the events you want featured in the post?',
         ]}
-        previewItems={eventsLinkedInPreview}
+        previewItems={workflowCity ? eventsLinkedInPreview : undefined}
         previewLabel="Events to be included"
+        city={workflowCity}
+        onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         confirmLabel="Yes, generate draft"
         onConfirm={confirmLinkedInPost}
-        onCancel={() => setLinkedInConfirmOpen(false)}
+        onCancel={() => {
+          setLinkedInConfirmOpen(false)
+          setSelectedWorkflowCity(null)
+        }}
       />
     </Layout>
   )
