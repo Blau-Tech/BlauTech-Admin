@@ -1,5 +1,7 @@
 'use client'
 
+import { ADMIN_LINKEDIN_CITIES, type CityCode } from '@/lib/authorization'
+
 export interface ConfirmModalPreviewItem {
   id?: string
   name: string
@@ -15,6 +17,8 @@ interface ConfirmModalProps {
   confirmLabel?: string
   previewItems?: ConfirmModalPreviewItem[]
   previewLabel?: string
+  city?: CityCode | null
+  onCityChange?: (city: CityCode | null) => void
   onConfirm: () => void
   onCancel: () => void
 }
@@ -33,10 +37,14 @@ export default function ConfirmModal({
   confirmLabel = 'Yes, proceed',
   previewItems,
   previewLabel,
+  city,
+  onCityChange,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
   if (!isOpen) return null
+
+  const cityRequired = city !== undefined || onCityChange !== undefined
 
   return (
     <div className="relative z-50" role="dialog" aria-modal="true">
@@ -52,6 +60,33 @@ export default function ConfirmModal({
           <div className="p-7">
             <h3 className="text-xl font-bold text-gray-900 mb-1">{title}</h3>
             <p className="text-sm text-gray-500 mb-5">Make sure you've done the following <span className="font-bold text-gray-700">before</span> triggering the workflow.</p>
+
+            {cityRequired && (
+              <div className="mb-5">
+                <label htmlFor="workflow-city" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  City
+                </label>
+                {onCityChange ? (
+                  <select
+                    id="workflow-city"
+                    value={city ?? ''}
+                    onChange={(event) => onCityChange(event.target.value ? (event.target.value as CityCode) : null)}
+                    className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500"
+                  >
+                    <option value="">Select city…</option>
+                    {ADMIN_LINKEDIN_CITIES.map((option) => (
+                      <option key={option} value={option}>
+                        {option.charAt(0) + option.slice(1).toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="rounded-xl glass-input px-4 py-2.5 text-sm text-gray-700">
+                    {city ? city.charAt(0) + city.slice(1).toLowerCase() : 'Not assigned'}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Checklist — primary focus */}
             <ul className="mb-4 space-y-2">
@@ -131,7 +166,8 @@ export default function ConfirmModal({
               <button
                 type="button"
                 onClick={() => { onConfirm(); onCancel() }}
-                className="rounded-xl bg-primary-600/90 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-all"
+                disabled={cityRequired && !city}
+                className="rounded-xl bg-primary-600/90 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               >
                 {confirmLabel}
               </button>

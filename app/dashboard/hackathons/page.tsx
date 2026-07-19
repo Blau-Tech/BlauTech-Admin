@@ -8,6 +8,7 @@ import HackathonDetailView from '@/components/HackathonDetailView'
 import { toast } from 'sonner'
 import { hackathonsApi, triggerWorkflow } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { resolveWorkflowCity, type CityCode } from '@/lib/authorization'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
@@ -32,7 +33,9 @@ export default function HackathonsPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCity, setSelectedCity] = useState<string | null>(null)
+  const [selectedCity, setSelectedCity] = useState<CityCode | null>(null)
+  const [selectedWorkflowCity, setSelectedWorkflowCity] = useState<CityCode | null>(null)
+  const workflowCity = resolveWorkflowCity(isCityLead, userCity, selectedWorkflowCity)
 
   useEffect(() => {
     if (authLoading) return
@@ -59,9 +62,14 @@ export default function HackathonsPage() {
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
   const confirmLinkedInPost = async () => {
+    if (!workflowCity) {
+      toast.error('Please select a city.')
+      return
+    }
+
     const toastId = toast.loading('Generating Hackathons LinkedIn draft…')
     try {
-      await triggerWorkflow('blau-network-linkedin-hackathons', (userCity || '').toUpperCase())
+      await triggerWorkflow('blau-network-linkedin-hackathons', workflowCity)
       toast.success('Hackathons LinkedIn draft generation started!', { id: toastId })
     } catch (err: any) {
       toast.error('Failed to generate Hackathons LinkedIn draft', {
@@ -70,6 +78,7 @@ export default function HackathonsPage() {
       })
     } finally {
       setLinkedInConfirmOpen(false)
+      setSelectedWorkflowCity(null)
     }
   }
 
@@ -183,18 +192,18 @@ export default function HackathonsPage() {
   }
 
   const hackathonsLinkedInPreview = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = format(new Date(), 'yyyy-MM-dd')
     return hackathons
       .filter((h: any) =>
+        h.city === workflowCity &&
         h.is_highlight &&
         !h.posted_linkedin &&
-        (!h.signup_deadline || new Date(h.signup_deadline) >= today)
+        h.start_date?.slice(0, 10) > today
       )
       .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
       .slice(0, 3)
       .map((h: any) => ({ id: h.id, name: h.name || h.title, start_date: h.start_date, city: h.city }))
-  }, [hackathons])
+  }, [hackathons, workflowCity])
 
   // Filter hackathons based on search
   const filteredHackathons = useMemo(() => {
@@ -831,11 +840,16 @@ export default function HackathonsPage() {
         checklist={[
           'Have you highlighted the hackathons you want featured in the post?',
         ]}
-        previewItems={hackathonsLinkedInPreview}
+        previewItems={workflowCity ? hackathonsLinkedInPreview : undefined}
         previewLabel="Hackathons to be included"
+        city={workflowCity}
+        onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         confirmLabel="Yes, generate draft"
         onConfirm={confirmLinkedInPost}
-        onCancel={() => setLinkedInConfirmOpen(false)}
+        onCancel={() => {
+          setLinkedInConfirmOpen(false)
+          setSelectedWorkflowCity(null)
+        }}
       />
     </Layout>
   )
