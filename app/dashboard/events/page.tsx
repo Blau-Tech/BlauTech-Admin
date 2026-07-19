@@ -78,7 +78,7 @@ export default function EventsPage() {
 
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
-  const confirmLinkedInPost = async () => {
+  const confirmLinkedInPost = async (testMode: boolean) => {
     if (!workflowCity) {
       toast.error('Please select a city.')
       return
@@ -86,8 +86,13 @@ export default function EventsPage() {
 
     const toastId = toast.loading('Generating Events LinkedIn draft…')
     try {
-      await triggerWorkflow('blau-network-linkedin-events', workflowCity)
-      toast.success('Events LinkedIn draft generation started!', { id: toastId })
+      await triggerWorkflow('blau-network-linkedin-events', { city: workflowCity, test_mode: testMode })
+      toast.success(
+        testMode
+          ? 'Events LinkedIn test started. The preview will appear in n8n execution history.'
+          : 'Live Events LinkedIn draft generation started!',
+        { id: toastId }
+      )
     } catch (err: any) {
       toast.error('Failed to generate Events LinkedIn draft', {
         id: toastId,
@@ -180,9 +185,11 @@ export default function EventsPage() {
     }
   }
 
-  const handleSubmitLink = async (e: React.FormEvent) => {
+  const handleSubmitLink = async (e: React.FormEvent<HTMLFormElement>) => {
 
     const url = process.env.NEXT_PUBLIC_N8N_EVENT_INTAKE_URL
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    const testMode = submitter?.value !== 'false'
 
     e.preventDefault()
     setLinkMessage(null)
@@ -210,15 +217,23 @@ export default function EventsPage() {
           source: 'admin',
           event_link: linkUrl.trim(),
           city,
+          test_mode: testMode,
         }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || data.message || res.statusText || 'Request failed')
       }
-      setLinkMessage({ type: 'success', text: 'Link submitted successfully.' })
-      setLinkUrl('')
-      if (isAdmin) setLinkCity('')
+      setLinkMessage({
+        type: 'success',
+        text: testMode
+          ? 'Test started. Nothing will be published; the preview will appear in n8n execution history.'
+          : 'Live upload started successfully.',
+      })
+      if (!testMode) {
+        setLinkUrl('')
+        if (isAdmin) setLinkCity('')
+      }
     } catch (err: any) {
       setLinkMessage({ type: 'error', text: err.message || 'Failed to submit link.' })
     } finally {
@@ -546,10 +561,21 @@ export default function EventsPage() {
             )}
             <button
               type="submit"
+              name="test_mode"
+              value="true"
+              disabled={linkSubmitting}
+              className="rounded-xl border border-primary-600 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:ring-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:pointer-events-none transition-all"
+            >
+              {linkSubmitting ? 'Working…' : 'Test link'}
+            </button>
+            <button
+              type="submit"
+              name="test_mode"
+              value="false"
               disabled={linkSubmitting}
               className="rounded-xl bg-primary-600/90 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:ring-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:pointer-events-none transition-all"
             >
-              {linkSubmitting ? 'Submitting…' : 'Submit link'}
+              {linkSubmitting ? 'Working…' : 'Upload live'}
             </button>
           </form>
           {linkMessage && (
@@ -1089,7 +1115,6 @@ export default function EventsPage() {
         previewLabel="Events to be included"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
-        confirmLabel="Yes, generate draft"
         onConfirm={confirmLinkedInPost}
         onCancel={() => {
           setLinkedInConfirmOpen(false)

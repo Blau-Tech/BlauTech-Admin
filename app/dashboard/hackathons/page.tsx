@@ -61,7 +61,7 @@ export default function HackathonsPage() {
 
   const [linkedInConfirmOpen, setLinkedInConfirmOpen] = useState(false)
 
-  const confirmLinkedInPost = async () => {
+  const confirmLinkedInPost = async (testMode: boolean) => {
     if (!workflowCity) {
       toast.error('Please select a city.')
       return
@@ -69,8 +69,13 @@ export default function HackathonsPage() {
 
     const toastId = toast.loading('Generating Hackathons LinkedIn draft…')
     try {
-      await triggerWorkflow('blau-network-linkedin-hackathons', workflowCity)
-      toast.success('Hackathons LinkedIn draft generation started!', { id: toastId })
+      await triggerWorkflow('blau-network-linkedin-hackathons', { city: workflowCity, test_mode: testMode })
+      toast.success(
+        testMode
+          ? 'Hackathons LinkedIn test started. The preview will appear in n8n execution history.'
+          : 'Live Hackathons LinkedIn draft generation started!',
+        { id: toastId }
+      )
     } catch (err: any) {
       toast.error('Failed to generate Hackathons LinkedIn draft', {
         id: toastId,
@@ -844,7 +849,6 @@ export default function HackathonsPage() {
         previewLabel="Hackathons to be included"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
-        confirmLabel="Yes, generate draft"
         onConfirm={confirmLinkedInPost}
         onCancel={() => {
           setLinkedInConfirmOpen(false)
