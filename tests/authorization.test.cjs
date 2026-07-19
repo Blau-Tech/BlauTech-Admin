@@ -87,19 +87,27 @@ test('authorizes LinkedIn cities by protected role and assignment', () => {
   const berlinLead = getAccessClaims({ app_metadata: { role: 'city_lead', city: 'BERLIN' } })
   const madridLead = getAccessClaims({ app_metadata: { role: 'city_lead', city: 'MADRID' } })
 
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', 'MUNICH', admin).allowed, true)
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', 'MADRID', admin).status, 400)
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', {}, admin).status, 400)
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', 'BERLIN', berlinLead).allowed, true)
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', 'MUNICH', berlinLead).status, 403)
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-hackathons', 'MADRID', madridLead).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MUNICH', test_mode: false }, admin).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MADRID', test_mode: true }, admin).status, 400)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { test_mode: true }, admin).status, 400)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'BERLIN', test_mode: true }, berlinLead).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MUNICH', test_mode: true }, berlinLead).status, 403)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-hackathons', { city: 'MADRID', test_mode: false }, madridLead).allowed, true)
 })
 
 test('restricts newsletters to full admins and rejects unknown workflows', () => {
   const admin = getAccessClaims({ app_metadata: { role: 'super_admin' } })
   const cityLead = getAccessClaims({ app_metadata: { role: 'city_lead', city: 'BERLIN' } })
 
-  assert.equal(authorizeWorkflowRequest('blau-network-newsletter', {}, admin).allowed, true)
-  assert.equal(authorizeWorkflowRequest('blau-network-newsletter', {}, cityLead).status, 403)
-  assert.equal(authorizeWorkflowRequest('not-real', {}, admin).status, 404)
+  assert.equal(authorizeWorkflowRequest('blau-network-newsletter', { test_mode: false }, admin).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-newsletter', { test_mode: true }, cityLead).status, 403)
+  assert.equal(authorizeWorkflowRequest('not-real', { test_mode: true }, admin).status, 404)
+})
+
+test('requires test_mode to be a real boolean', () => {
+  const admin = getAccessClaims({ app_metadata: { role: 'admin' } })
+
+  for (const payload of [undefined, null, {}, { test_mode: 'true' }, { test_mode: 1 }]) {
+    assert.equal(authorizeWorkflowRequest('blau-network-newsletter', payload, admin).status, 400)
+  }
 })

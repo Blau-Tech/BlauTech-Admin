@@ -14,12 +14,11 @@ interface ConfirmModalProps {
   title: string
   checklist: string[]
   info?: string
-  confirmLabel?: string
   previewItems?: ConfirmModalPreviewItem[]
   previewLabel?: string
   city?: CityCode | null
   onCityChange?: (city: CityCode | null) => void
-  onConfirm: () => void
+  onConfirm: (testMode: boolean) => void
   onCancel: () => void
 }
 
@@ -34,7 +33,6 @@ export default function ConfirmModal({
   title,
   checklist,
   info,
-  confirmLabel = 'Yes, proceed',
   previewItems,
   previewLabel,
   city,
@@ -150,9 +148,9 @@ export default function ConfirmModal({
               </div>
             )}
 
-            {/* Consequence note */}
+            {/* Run mode note */}
             <p className="text-xs text-gray-400 mb-6">
-              Re-triggering the workflow won't reuse the same items — it'll just generate a new draft based on whatever is highlighted at that point.
+              Test run saves a preview in n8n execution history without publishing or marking items as posted. Run live performs the real workflow.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -165,11 +163,19 @@ export default function ConfirmModal({
               </button>
               <button
                 type="button"
-                onClick={() => { onConfirm(); onCancel() }}
+                onClick={() => { onConfirm(true); onCancel() }}
+                disabled={cityRequired && !city}
+                className="rounded-xl border border-primary-600 px-5 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+              >
+                Test run
+              </button>
+              <button
+                type="button"
+                onClick={() => { onConfirm(false); onCancel() }}
                 disabled={cityRequired && !city}
                 className="rounded-xl bg-primary-600/90 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               >
-                {confirmLabel}
+                Run live
               </button>
             </div>
           </div>

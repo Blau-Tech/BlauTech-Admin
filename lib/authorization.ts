@@ -74,23 +74,34 @@ export function authorizeWorkflowRequest(
     return { allowed: false, status: 403, message: 'You do not have permission to trigger workflows.' }
   }
 
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    Array.isArray(payload) ||
+    typeof (payload as Record<string, unknown>).test_mode !== 'boolean'
+  ) {
+    return { allowed: false, status: 400, message: 'test_mode must be true or false.' }
+  }
+
   if (path === 'blau-network-newsletter') {
     return claims.isAdmin
       ? { allowed: true }
       : { allowed: false, status: 403, message: 'Only admins can trigger the newsletter workflow.' }
   }
 
-  if (payload !== 'MUNICH' && payload !== 'BERLIN' && payload !== 'MADRID') {
+  const city = (payload as Record<string, unknown>).city
+
+  if (city !== 'MUNICH' && city !== 'BERLIN' && city !== 'MADRID') {
     return { allowed: false, status: 400, message: 'A valid city is required.' }
   }
 
   if (claims.isCityLead) {
-    return payload === claims.city
+    return city === claims.city
       ? { allowed: true }
       : { allowed: false, status: 403, message: 'City leads can only trigger workflows for their assigned city.' }
   }
 
-  return (ADMIN_LINKEDIN_CITIES as readonly string[]).includes(payload)
+  return (ADMIN_LINKEDIN_CITIES as readonly string[]).includes(city)
     ? { allowed: true }
     : { allowed: false, status: 400, message: 'Madrid LinkedIn routing is not available for admins.' }
 }

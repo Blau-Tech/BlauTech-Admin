@@ -102,7 +102,7 @@ export default function Dashboard() {
     }
   }
 
-  const confirmWorkflow = async () => {
+  const confirmWorkflow = async (testMode: boolean) => {
     const label =
       pendingWorkflow === 'events-linkedin' ? 'Events LinkedIn draft' :
       pendingWorkflow === 'hackathons-linkedin' ? 'Hackathons LinkedIn draft' :
@@ -116,13 +116,18 @@ export default function Dashboard() {
     const toastId = toast.loading(`Generating ${label}…`)
     try {
       if (pendingWorkflow === 'events-linkedin') {
-        await triggerWorkflow('blau-network-linkedin-events', workflowCity)
+        await triggerWorkflow('blau-network-linkedin-events', { city: workflowCity, test_mode: testMode })
       } else if (pendingWorkflow === 'hackathons-linkedin') {
-        await triggerWorkflow('blau-network-linkedin-hackathons', workflowCity)
+        await triggerWorkflow('blau-network-linkedin-hackathons', { city: workflowCity, test_mode: testMode })
       } else if (pendingWorkflow === 'newsletter') {
-        await triggerWorkflow('blau-network-newsletter', {})
+        await triggerWorkflow('blau-network-newsletter', { test_mode: testMode })
       }
-      toast.success(`${label} generation started!`, { id: toastId })
+      toast.success(
+        testMode
+          ? `${label} test started. The preview will appear in n8n execution history.`
+          : `${label} live generation started!`,
+        { id: toastId }
+      )
     } catch (err: any) {
       toast.error(`Failed to generate ${label}`, {
         id: toastId,
@@ -353,7 +358,6 @@ export default function Dashboard() {
         previewLabel="Events to be included"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
-        confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
         onCancel={() => {
           setPendingWorkflow(null)
@@ -372,7 +376,6 @@ export default function Dashboard() {
         previewLabel="Hackathons to be included"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
-        confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
         onCancel={() => {
           setPendingWorkflow(null)
@@ -387,7 +390,6 @@ export default function Dashboard() {
           'Have you highlighted the events to include in the newsletter?',
           'Have you highlighted the hackathons to include in the newsletter?',
         ]}
-        confirmLabel="Yes, generate draft"
         onConfirm={confirmWorkflow}
         onCancel={() => setPendingWorkflow(null)}
       />
