@@ -25,18 +25,18 @@ type Opportunity = {
   posted_whatsapp: boolean
   posted_newsletter: boolean
   is_highlight: boolean
+  is_published: boolean
   created_at: string
 }
 
 const TYPE_LABELS: Record<OpportunityType, string> = {
   PROGRAM: 'Program',
-  FELLOWSHIP: 'Fellowship',
+  FELLOWSHIP: 'Program',
 }
 
 const TYPE_FILTERS: { value: OpportunityType | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'All' },
   { value: 'PROGRAM', label: 'Programs' },
-  { value: 'FELLOWSHIP', label: 'Fellowships' },
 ]
 
 export default function OpportunitiesPage() {
@@ -72,8 +72,8 @@ export default function OpportunitiesPage() {
   const filteredOpportunities = useMemo(() => {
     let filtered = [...opportunities]
 
-    if (typeFilter !== 'ALL') {
-      filtered = filtered.filter((o) => o.opportunity_type === typeFilter)
+    if (typeFilter === 'PROGRAM') {
+      filtered = filtered.filter((o) => ['PROGRAM', 'FELLOWSHIP'].includes(o.opportunity_type))
     }
 
     if (searchQuery.trim()) {
@@ -245,6 +245,7 @@ export default function OpportunitiesPage() {
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge color="pink" size="sm">{TYPE_LABELS[opp.opportunity_type]}</Badge>
+                        {opp.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {Array.isArray(opp.cities) && opp.cities.map((c) => (
                           <Badge key={c} color="gray" size="sm">{c}</Badge>
                         ))}
@@ -297,7 +298,7 @@ export default function OpportunitiesPage() {
                       onClick={() => handleEdit(opp)}
                       className="text-primary-600 hover:text-primary-800 text-sm font-medium"
                     >
-                      Edit
+                      {opp.is_published === false ? 'Review & approve' : 'Edit'}
                     </button>
                     <button
                       onClick={() => handleDelete(opp)}

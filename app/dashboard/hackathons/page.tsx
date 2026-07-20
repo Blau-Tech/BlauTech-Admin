@@ -282,6 +282,7 @@ export default function HackathonsPage() {
               <span className="text-yellow-500" title="Highlighted">⭐</span>
             )}
             {value || row.title || '-'}
+            {row.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
           </div>
           {row.description && (
             <div className="text-sm text-gray-500 mt-1 line-clamp-1">{row.description}</div>
@@ -499,6 +500,7 @@ export default function HackathonsPage() {
                         {hackathon.name || hackathon.title}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
+                        {hackathon.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {hackathon.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                       </div>
                     </div>
@@ -742,6 +744,7 @@ export default function HackathonsPage() {
                                 <h3 className="text-lg font-bold text-gray-900">
                                   {hackathon.name || hackathon.title}
                                 </h3>
+                                {hackathon.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                                 {hackathon.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                               </div>
 

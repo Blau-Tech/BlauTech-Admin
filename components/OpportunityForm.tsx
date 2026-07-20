@@ -6,15 +6,13 @@ import FormSection from './ui/FormSection'
 import FormActions from './ui/FormActions'
 import ErrorBanner from './ui/ErrorBanner'
 import MultiSelect from './ui/MultiSelect'
-import { TextField, TextareaField, SelectField, CheckboxField } from './ui/FormField'
+import { TextField, TextareaField, CheckboxField } from './ui/FormField'
 
-type OpportunityType = 'PROGRAM' | 'FELLOWSHIP'
 type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
 
 const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID']
 
 interface OpportunityFormData {
-  opportunity_type: OpportunityType
   title: string
   organisation: string
   description: string
@@ -24,6 +22,7 @@ interface OpportunityFormData {
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
   is_highlight?: boolean
+  is_published?: boolean
 }
 
 interface OpportunityFormProps {
@@ -34,6 +33,7 @@ interface OpportunityFormProps {
 }
 
 const FLAGS: { id: keyof OpportunityFormData; label: string }[] = [
+  { id: 'is_published', label: 'Published on public website (approve)' },
   { id: 'posted_linkedin', label: 'Posted on LinkedIn' },
   { id: 'posted_whatsapp', label: 'Posted on WhatsApp' },
   { id: 'posted_newsletter', label: 'Posted in Newsletter' },
@@ -52,7 +52,6 @@ export default function OpportunityForm({ initialData, onSubmit, onCancel }: Opp
   useEffect(() => {
     if (initialData) {
       reset({
-        opportunity_type: (initialData.opportunity_type as OpportunityType) || 'PROGRAM',
         title: initialData.title || '',
         organisation: initialData.organisation || '',
         description: initialData.description || '',
@@ -62,11 +61,11 @@ export default function OpportunityForm({ initialData, onSubmit, onCancel }: Opp
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
         is_highlight: initialData.is_highlight || false,
+        is_published: initialData.is_published ?? true,
       })
       setCities(Array.isArray(initialData.cities) ? initialData.cities : [])
     } else {
       reset({
-        opportunity_type: 'PROGRAM',
         title: '',
         organisation: '',
         description: '',
@@ -76,6 +75,7 @@ export default function OpportunityForm({ initialData, onSubmit, onCancel }: Opp
         posted_whatsapp: false,
         posted_newsletter: false,
         is_highlight: false,
+        is_published: true,
       })
       setCities([])
     }
@@ -95,7 +95,7 @@ export default function OpportunityForm({ initialData, onSubmit, onCancel }: Opp
       }
 
       const payload: any = {
-        opportunity_type: data.opportunity_type,
+        opportunity_type: 'PROGRAM',
         title: data.title.trim(),
         organisation: data.organisation.trim(),
         description: data.description.trim(),
@@ -106,6 +106,7 @@ export default function OpportunityForm({ initialData, onSubmit, onCancel }: Opp
         posted_whatsapp: !!data.posted_whatsapp,
         posted_newsletter: !!data.posted_newsletter,
         is_highlight: !!data.is_highlight,
+        is_published: !!data.is_published,
       }
 
       await onSubmit(payload)
@@ -122,16 +123,6 @@ export default function OpportunityForm({ initialData, onSubmit, onCancel }: Opp
       <ErrorBanner message={formError} onClose={() => setFormError('')} />
 
       <FormSection title="Basic Information" first>
-        <SelectField
-          id="opportunity_type"
-          label="Type"
-          required
-          {...register('opportunity_type', { required: 'Type is required' })}
-        >
-          <option value="PROGRAM">Program</option>
-          <option value="FELLOWSHIP">Fellowship</option>
-        </SelectField>
-
         <TextField
           id="title"
           label="Title"

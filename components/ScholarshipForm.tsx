@@ -25,6 +25,7 @@ interface ScholarshipFormData {
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
   is_highlight?: boolean
+  is_published?: boolean
 }
 
 interface ScholarshipFormProps {
@@ -35,6 +36,7 @@ interface ScholarshipFormProps {
 }
 
 const FLAGS: { id: keyof ScholarshipFormData; label: string }[] = [
+  { id: 'is_published', label: 'Published on public website (approve)' },
   { id: 'posted_linkedin', label: 'Posted on LinkedIn' },
   { id: 'posted_whatsapp', label: 'Posted on WhatsApp' },
   { id: 'posted_newsletter', label: 'Posted in Newsletter' },
@@ -69,6 +71,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
         is_highlight: initialData.is_highlight || false,
+        is_published: initialData.is_published ?? true,
       })
       setCities(Array.isArray(initialData.cities) ? initialData.cities : [])
       setStudyLevel(Array.isArray(initialData.study_level) ? initialData.study_level : [])
@@ -85,6 +88,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         posted_whatsapp: false,
         posted_newsletter: false,
         is_highlight: false,
+        is_published: true,
       })
       setCities([])
       setStudyLevel([])
@@ -119,6 +123,7 @@ export default function ScholarshipForm({ initialData, onSubmit, onCancel }: Sch
         posted_whatsapp: !!data.posted_whatsapp,
         posted_newsletter: !!data.posted_newsletter,
         is_highlight: !!data.is_highlight,
+        is_published: !!data.is_published,
       }
 
       await onSubmit(payload)

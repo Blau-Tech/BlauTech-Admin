@@ -198,7 +198,7 @@ export default function EventsPage() {
       return
     }
     if (!url) {
-      setLinkMessage({ type: 'error', text: 'Event link intake is not configured.' })
+      setLinkMessage({ type: 'error', text: 'Link intake is not configured.' })
       return
     }
 
@@ -227,8 +227,8 @@ export default function EventsPage() {
       setLinkMessage({
         type: 'success',
         text: testMode
-          ? 'Test started. Nothing will be published; the preview will appear in n8n execution history.'
-          : 'Live upload started successfully.',
+          ? 'Test started. Nothing will be saved; the preview will appear in n8n execution history.'
+          : 'Upload started. Programs and scholarships will wait for Admin approval.',
       })
       if (!testMode) {
         setLinkUrl('')
@@ -414,6 +414,7 @@ export default function EventsPage() {
               <span className="text-yellow-500" title="Highlighted">⭐</span>
             )}
             {value || '-'}
+            {row.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
           </div>
           {row.description && (
             <div className="text-sm text-gray-500 mt-1 line-clamp-1">{row.description}</div>
@@ -525,13 +526,17 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Link submission form */}
-        <GlassCard variant="subtle" className="mb-6 p-4">
+        {/* Universal link submission form */}
+        <GlassCard id="link-uploader" variant="subtle" className="mb-6 p-4">
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-gray-900">Upload any listing link</h2>
+            <p className="text-sm text-gray-600">Event, hackathon, program, or scholarship. AI will identify the type.</p>
+          </div>
           <form onSubmit={handleSubmitLink} className="flex flex-wrap items-center gap-3">
             <Input
               id="link-url"
               type="url"
-              placeholder="Paste link (URL)..."
+              placeholder="Paste an event, hackathon, program, or scholarship URL..."
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               disabled={linkSubmitting}
@@ -575,7 +580,7 @@ export default function EventsPage() {
               disabled={linkSubmitting}
               className="rounded-xl bg-primary-600/90 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:ring-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:pointer-events-none transition-all"
             >
-              {linkSubmitting ? 'Working…' : 'Upload live'}
+              {linkSubmitting ? 'Working…' : 'Submit link'}
             </button>
           </form>
           {linkMessage && (
@@ -802,6 +807,7 @@ export default function EventsPage() {
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
                         {event.format && <Badge color="blue" size="sm">{formatFormatLabel(event.format)}</Badge>}
+                        {event.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {event.partner_event && <Badge color="blue" size="sm">Partner</Badge>}
                         {event.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                       </div>
@@ -1031,6 +1037,7 @@ export default function EventsPage() {
                               {event.format && (
                                 <div className="flex items-center gap-2 flex-wrap mt-3">
                                   <Badge color="blue" size="sm">{formatFormatLabel(event.format)}</Badge>
+                                  {event.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                                   {event.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                                 </div>
                               )}
