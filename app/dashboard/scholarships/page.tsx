@@ -12,6 +12,7 @@ import ErrorBanner from '@/components/ui/ErrorBanner'
 import SuccessBanner from '@/components/ui/SuccessBanner'
 import SearchBar from '@/components/ui/SearchBar'
 import Badge from '@/components/ui/Badge'
+import Link from 'next/link'
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
@@ -29,9 +30,6 @@ export default function ScholarshipsPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [searchQuery, setSearchQuery] = useState('')
-  const [scholarshipLink, setScholarshipLink] = useState('')
-  const [webhookUrl] = useState(process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || '')
-  const [webhookLoading, setWebhookLoading] = useState(false)
 
   useEffect(() => {
     if (authLoading) return
@@ -103,36 +101,6 @@ export default function ScholarshipsPage() {
     }
   }
 
-  const handleWebhookSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!scholarshipLink.trim() || !webhookUrl) {
-      return
-    }
-
-    try {
-      setWebhookLoading(true)
-      setError('')
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scholarship_link: scholarshipLink.trim() }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Webhook request failed: ${response.statusText}`)
-      }
-
-      setSuccessMessage('Scholarship link sent successfully!')
-      setScholarshipLink('')
-      setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to send webhook request')
-    } finally {
-      setWebhookLoading(false)
-    }
-  }
-
   const formatDateLabel = (date: Date) => {
     if (isToday(date)) return 'Today'
     if (isTomorrow(date)) return 'Tomorrow'
@@ -185,6 +153,7 @@ export default function ScholarshipsPage() {
           <div className="font-medium text-gray-900 flex items-center gap-2">
             {row.is_highlight && <span className="text-yellow-500" title="Highlighted">⭐</span>}
             {value || '-'}
+            {row.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
           </div>
           {row.organisation && (
             <div className="text-sm text-gray-500 mt-0.5">{row.organisation}</div>
@@ -293,27 +262,10 @@ export default function ScholarshipsPage() {
           className="mb-6"
         />
 
-        {/* n8n webhook input */}
-        <div className="mb-8 flex justify-center">
-          <GlassCard variant="subtle" className="w-full max-w-2xl p-4">
-            <form onSubmit={handleWebhookSubmit} className="flex items-center gap-3">
-              <input
-                type="url"
-                placeholder="Enter scholarship link URL..."
-                value={scholarshipLink}
-                onChange={(e) => setScholarshipLink(e.target.value)}
-                className="flex-1 text-base px-4 py-3 glass-input rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500 transition-all"
-                disabled={webhookLoading}
-              />
-              <button
-                type="submit"
-                disabled={!scholarshipLink.trim() || !webhookUrl || webhookLoading}
-                className="px-6 py-3 text-base font-semibold text-white bg-primary-600/90 backdrop-blur-sm rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-              >
-                {webhookLoading ? 'Sending...' : 'Send'}
-              </button>
-            </form>
-          </GlassCard>
+        <div className="mb-8 text-center">
+          <Link href="/dashboard/events#link-uploader" className="text-sm font-medium text-primary-600 hover:text-primary-800">
+            Upload a scholarship link with the universal uploader →
+          </Link>
         </div>
 
         {/* Display */}
@@ -343,6 +295,7 @@ export default function ScholarshipsPage() {
                         <p className="text-sm text-gray-500 mb-2">by {s.organisation}</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
+                        {s.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {s.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                         {Array.isArray(s.cities) && s.cities.map((c: string) => (
                           <Badge key={c} color="gray" size="sm">{c}</Badge>
@@ -473,7 +426,10 @@ export default function ScholarshipsPage() {
                           <div className="text-sm font-medium text-gray-900 mb-2">
                             Deadline: {format(new Date(s.deadline), 'PP')}
                           </div>
-                          <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-bold text-gray-900">{s.title}</h3>
+                            {s.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
+                          </div>
                           {s.organisation && <p className="text-sm text-gray-600 mb-3">By {s.organisation}</p>}
                           {s.description && <p className="text-sm text-gray-500 line-clamp-2">{s.description}</p>}
                         </div>
@@ -504,6 +460,7 @@ export default function ScholarshipsPage() {
                 <p className="text-sm text-gray-500 mt-1">by {viewingScholarship.organisation}</p>
               )}
               <div className="flex items-center gap-2 flex-wrap mt-2">
+                {viewingScholarship.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                 {viewingScholarship.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                 {Array.isArray(viewingScholarship.cities) && viewingScholarship.cities.map((c: string) => (
                   <Badge key={c} color="gray" size="sm">{c}</Badge>
@@ -574,7 +531,7 @@ export default function ScholarshipsPage() {
                 }}
                 className="px-4 py-2 text-sm font-semibold text-primary-600 border border-primary-300/60 backdrop-blur-sm rounded-xl hover:bg-primary-50/60 transition-all"
               >
-                Edit
+                {viewingScholarship.is_published === false ? 'Review & approve' : 'Edit'}
               </button>
               <button
                 onClick={() => {

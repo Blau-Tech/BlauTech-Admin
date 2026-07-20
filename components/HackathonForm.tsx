@@ -35,6 +35,7 @@ interface HackathonFormData {
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
   is_highlight?: boolean
+  is_published?: boolean
 }
 
 interface HackathonFormProps {
@@ -62,6 +63,7 @@ const normaliseTime = (value: string | undefined): string | null => {
 }
 
 const FLAGS: { id: keyof HackathonFormData; label: string }[] = [
+  { id: 'is_published', label: 'Published on public website (approve)' },
   { id: 'partner_event', label: 'Partner Hackathon' },
   { id: 'is_highlight', label: 'Highlight Hackathon' },
   { id: 'posted_linkedin', label: 'Posted on LinkedIn' },
@@ -98,6 +100,7 @@ export default function HackathonForm({ initialData, onSubmit, onCancel }: Hacka
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
         is_highlight: initialData.is_highlight || false,
+        is_published: initialData.is_published ?? true,
       })
     } else {
       reset({
@@ -120,6 +123,7 @@ export default function HackathonForm({ initialData, onSubmit, onCancel }: Hacka
         posted_whatsapp: false,
         posted_newsletter: false,
         is_highlight: false,
+        is_published: true,
       })
     }
   }, [initialData, reset])
@@ -169,6 +173,7 @@ export default function HackathonForm({ initialData, onSubmit, onCancel }: Hacka
         posted_whatsapp: !!data.posted_whatsapp,
         posted_newsletter: !!data.posted_newsletter,
         is_highlight: !!data.is_highlight,
+        is_published: !!data.is_published,
       }
 
       await onSubmit(payload)

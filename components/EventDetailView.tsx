@@ -33,6 +33,7 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
                 <Badge color="blue">{formatFormatLabel(event.format)}</Badge>
               )}
               {event.city && <Badge color="gray">{event.city}</Badge>}
+              {event.is_published === false && <Badge color="amber">Needs approval</Badge>}
               {event.is_highlight && <Badge color="yellow">Highlight</Badge>}
               {event.partner_event && <Badge color="indigo">Partner Event</Badge>}
             </div>
@@ -178,7 +179,7 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
           onClick={onEdit}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600/90 backdrop-blur-sm rounded-xl hover:bg-primary-700 transition-all"
         >
-          Edit Event
+          {event.is_published === false ? 'Review & approve' : 'Edit Event'}
         </button>
         <button
           onClick={onDelete}
