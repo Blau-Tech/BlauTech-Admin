@@ -228,7 +228,7 @@ export default function EventsPage() {
         type: 'success',
         text: testMode
           ? 'Test started. Nothing will be saved; the preview will appear in n8n execution history.'
-          : 'Upload started. Programs and scholarships will wait for Admin approval.',
+          : 'Upload started. Verified listings publish automatically; uncertain submissions notify the city lead.',
       })
       if (!testMode) {
         setLinkUrl('')
@@ -530,7 +530,7 @@ export default function EventsPage() {
         <GlassCard id="link-uploader" variant="subtle" className="mb-6 p-4">
           <div className="mb-3">
             <h2 className="text-sm font-semibold text-gray-900">Upload any listing link</h2>
-            <p className="text-sm text-gray-600">Event, hackathon, program, or scholarship. AI will identify the type.</p>
+            <p className="text-sm text-gray-600">AI verifies the page, identifies the type, and publishes complete listings automatically.</p>
           </div>
           <form onSubmit={handleSubmitLink} className="flex flex-wrap items-center gap-3">
             <Input
@@ -580,7 +580,7 @@ export default function EventsPage() {
               disabled={linkSubmitting}
               className="rounded-xl bg-primary-600/90 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:ring-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:pointer-events-none transition-all"
             >
-              {linkSubmitting ? 'Working…' : 'Submit link'}
+              {linkSubmitting ? 'Working…' : 'Verify & publish'}
             </button>
           </form>
           {linkMessage && (
