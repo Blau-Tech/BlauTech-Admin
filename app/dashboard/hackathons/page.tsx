@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { hackathonsApi, triggerWorkflow } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { resolveWorkflowCity, type CityCode } from '@/lib/authorization'
+import { selectLinkedInPreview } from '@/lib/linkedinPreview'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
@@ -198,16 +199,7 @@ export default function HackathonsPage() {
 
   const hackathonsLinkedInPreview = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd')
-    return hackathons
-      .filter((h: any) =>
-        h.city === workflowCity &&
-        h.is_highlight &&
-        !h.posted_linkedin &&
-        h.start_date?.slice(0, 10) > today
-      )
-      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 3)
-      .map((h: any) => ({ id: h.id, name: h.name || h.title, start_date: h.start_date, city: h.city }))
+    return selectLinkedInPreview(hackathons, workflowCity, today, 2)
   }, [hackathons, workflowCity])
 
   // Filter hackathons based on search
@@ -844,12 +836,12 @@ export default function HackathonsPage() {
       <ConfirmModal
         isOpen={linkedInConfirmOpen}
         title="Generate Hackathons LinkedIn Draft"
-        info="The next 3 highlighted hackathons with the closest start dates will be included in the post."
+        info="The next 2 eligible upcoming hackathons are suggested. Highlights and partner events are prioritised, then the closest start date."
         checklist={[
-          'Have you highlighted the hackathons you want featured in the post?',
+          'Review the suggested hackathons before generating the draft.',
         ]}
         previewItems={workflowCity ? hackathonsLinkedInPreview : undefined}
-        previewLabel="Hackathons to be included"
+        previewLabel="Suggested hackathons"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         onConfirm={confirmLinkedInPost}

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { eventsApi, triggerWorkflow } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { resolveWorkflowCity, type CityCode } from '@/lib/authorization'
+import { selectLinkedInPreview } from '@/lib/linkedinPreview'
 import { Input } from '@/components/ui/input'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -302,16 +303,7 @@ export default function EventsPage() {
 
   const eventsLinkedInPreview = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd')
-    return events
-      .filter((e: any) =>
-        e.city === workflowCity &&
-        e.is_highlight &&
-        !e.posted_linkedin &&
-        e.start_date?.slice(0, 10) > today
-      )
-      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 4)
-      .map((e: any) => ({ id: e.id, name: e.name, start_date: e.start_date, city: e.city }))
+    return selectLinkedInPreview(events, workflowCity, today, 4)
   }, [events, workflowCity])
 
   // Filter events based on search and boolean filters
@@ -1114,12 +1106,12 @@ export default function EventsPage() {
       <ConfirmModal
         isOpen={linkedInConfirmOpen}
         title="Generate Events LinkedIn Draft"
-        info="The next 4 highlighted events with the closest start dates will be included in the post."
+        info="The next 4 eligible upcoming events are suggested. Highlights and partner events are prioritised, then the closest start date."
         checklist={[
-          'Have you highlighted the events you want featured in the post?',
+          'Review the suggested events before generating the draft.',
         ]}
         previewItems={workflowCity ? eventsLinkedInPreview : undefined}
-        previewLabel="Events to be included"
+        previewLabel="Suggested events"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         onConfirm={confirmLinkedInPost}

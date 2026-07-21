@@ -119,7 +119,7 @@ export default function ConfirmModal({
                     <svg className="h-4 w-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                     </svg>
-                    <p className="text-sm text-red-600">No qualifying items found. Make sure events are highlighted and not yet posted.</p>
+                    <p className="text-sm text-red-600">No eligible upcoming items found for this city.</p>
                   </div>
                 ) : (
                   <ul className="space-y-1.5">
@@ -150,7 +150,7 @@ export default function ConfirmModal({
 
             {/* Run mode note */}
             <p className="text-xs text-gray-400 mb-6">
-              Test run saves a preview in n8n execution history without publishing or marking items as posted. Run live performs the real workflow.
+              Test run saves a preview in n8n execution history without creating a draft or reserving items. Run live creates the review draft and reserves the selected items.
             </p>
 
             <div className="flex justify-end gap-3">
