@@ -5,6 +5,7 @@ const test = require('node:test')
 const ts = require('typescript')
 
 const source = fs.readFileSync(path.join(__dirname, '../lib/authorization.ts'), 'utf8')
+const routeSource = fs.readFileSync(path.join(__dirname, '../app/api/workflows/[...path]/route.ts'), 'utf8')
 const compiled = ts.transpileModule(source, {
   compilerOptions: {
     module: ts.ModuleKind.CommonJS,
@@ -23,6 +24,7 @@ const {
   authorizeWorkflowRequest,
   getAccessClaims,
   isAllowedWorkflowPath,
+  resolveN8nWorkflowPath,
   resolveWorkflowCity,
 } = authorizationModule.exports
 
@@ -79,7 +81,37 @@ test('allowlists only the deployed Admin workflow paths', () => {
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-events'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-hackathons'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-newsletter'), true)
+  assert.equal(isAllowedWorkflowPath('blau-network-linkedin-events-stable'), false)
+  assert.equal(isAllowedWorkflowPath('blau-network-linkedin-hackathons-stable'), false)
   assert.equal(isAllowedWorkflowPath('event-link'), false)
+})
+
+test('routes Berlin LinkedIn requests to current workflows and other cities to stable workflows', () => {
+  assert.equal(
+    resolveN8nWorkflowPath('blau-network-linkedin-events', 'BERLIN'),
+    'blau-network-linkedin-events'
+  )
+  assert.equal(
+    resolveN8nWorkflowPath('blau-network-linkedin-events', 'MUNICH'),
+    'blau-network-linkedin-events-stable'
+  )
+  assert.equal(
+    resolveN8nWorkflowPath('blau-network-linkedin-hackathons', 'MADRID'),
+    'blau-network-linkedin-hackathons-stable'
+  )
+  assert.equal(
+    resolveN8nWorkflowPath('blau-network-newsletter', undefined),
+    'blau-network-newsletter'
+  )
+})
+
+test('authorizes the public path before selecting its internal n8n route', () => {
+  const authorizationIndex = routeSource.indexOf('authorizeWorkflowRequest(webhookPath, payload')
+  const routingIndex = routeSource.indexOf('resolveN8nWorkflowPath(webhookPath, city)')
+
+  assert.notEqual(authorizationIndex, -1)
+  assert.ok(routingIndex > authorizationIndex)
+  assert.doesNotMatch(routeSource, /authorizeWorkflowRequest\(n8nWebhookPath/)
 })
 
 test('authorizes LinkedIn cities by protected role and assignment', () => {

@@ -150,7 +150,7 @@ export default function ConfirmModal({
 
             {/* Run mode note */}
             <p className="text-xs text-gray-400 mb-6">
-              Test run saves a preview in n8n execution history without creating a draft or reserving items. Run live creates the review draft and reserves the selected items.
+              Test run saves a preview in n8n execution history without changing any items. Run live performs the workflow and updates the items it uses.
             </p>
 
             <div className="flex justify-end gap-3">

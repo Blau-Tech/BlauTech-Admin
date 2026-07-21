@@ -187,25 +187,27 @@ export default function EventsPage() {
   }
 
   const handleSubmitLink = async (e: React.FormEvent<HTMLFormElement>) => {
-
-    const url = process.env.NEXT_PUBLIC_N8N_EVENT_INTAKE_URL
+    e.preventDefault()
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
     const testMode = submitter?.value !== 'false'
 
-    e.preventDefault()
     setLinkMessage(null)
     if (!linkUrl.trim()) {
       setLinkMessage({ type: 'error', text: 'Please enter a link.' })
-      return
-    }
-    if (!url) {
-      setLinkMessage({ type: 'error', text: 'Link intake is not configured.' })
       return
     }
 
     const city = isCityLead ? userCity?.trim().toUpperCase() : linkCity
     if (!city || !CITY_OPTIONS.includes(city as CityCode)) {
       setLinkMessage({ type: 'error', text: 'Please select a valid city.' })
+      return
+    }
+
+    const url = city === 'BERLIN'
+      ? process.env.NEXT_PUBLIC_N8N_BERLIN_EVENT_INTAKE_URL
+      : process.env.NEXT_PUBLIC_N8N_EVENT_INTAKE_URL
+    if (!url) {
+      setLinkMessage({ type: 'error', text: 'Link intake is not configured.' })
       return
     }
 
