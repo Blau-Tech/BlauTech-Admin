@@ -61,6 +61,14 @@ export function isAllowedWorkflowPath(path: string): boolean {
   return (ALLOWED_WORKFLOW_PATHS as readonly string[]).includes(path)
 }
 
+export function resolveN8nWorkflowPath(path: string, city: unknown): string {
+  if (!(LINKEDIN_WORKFLOW_PATHS as readonly string[]).includes(path) || city === 'BERLIN') {
+    return path
+  }
+
+  return `${path}-stable`
+}
+
 export function authorizeWorkflowRequest(
   path: string,
   payload: unknown,
