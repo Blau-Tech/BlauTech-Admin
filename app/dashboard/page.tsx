@@ -17,6 +17,7 @@ import {
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { resolveWorkflowCity, type CityCode } from '@/lib/authorization'
+import { selectLinkedInPreview } from '@/lib/linkedinPreview'
 import { format } from 'date-fns'
 
 const CalendarIcon = () => (
@@ -166,29 +167,11 @@ export default function Dashboard() {
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
 
   const eventsLinkedInPreview = useMemo(() => {
-    return calendarEvents
-      .filter((e: any) =>
-        e.city === workflowCity &&
-        e.is_highlight &&
-        !e.posted_linkedin &&
-        e.start_date?.slice(0, 10) > today
-      )
-      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 4)
-      .map((e: any) => ({ id: e.id, name: e.name, start_date: e.start_date, city: e.city }))
+    return selectLinkedInPreview(calendarEvents, workflowCity, today, 4)
   }, [calendarEvents, today, workflowCity])
 
   const hackathonsLinkedInPreview = useMemo(() => {
-    return calendarHackathons
-      .filter((h: any) =>
-        h.city === workflowCity &&
-        h.is_highlight &&
-        !h.posted_linkedin &&
-        h.start_date?.slice(0, 10) > today
-      )
-      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 3)
-      .map((h: any) => ({ id: h.id, name: h.name || h.title, start_date: h.start_date, city: h.city }))
+    return selectLinkedInPreview(calendarHackathons, workflowCity, today, 2)
   }, [calendarHackathons, today, workflowCity])
 
   const statCards: StatCard[] = [
@@ -350,12 +333,12 @@ export default function Dashboard() {
       <ConfirmModal
         isOpen={pendingWorkflow === 'events-linkedin'}
         title="Generate Events LinkedIn Draft"
-        info="The next 4 highlighted events with the closest start dates will be included in the post."
+        info="The next 4 eligible upcoming events are suggested. Highlights and partner events are prioritised, then the closest start date."
         checklist={[
-          'Have you highlighted the events you want featured in the post?',
+          'Review the suggested events before generating the draft.',
         ]}
         previewItems={workflowCity ? eventsLinkedInPreview : undefined}
-        previewLabel="Events to be included"
+        previewLabel="Suggested events"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         onConfirm={confirmWorkflow}
@@ -368,12 +351,12 @@ export default function Dashboard() {
       <ConfirmModal
         isOpen={pendingWorkflow === 'hackathons-linkedin'}
         title="Generate Hackathons LinkedIn Draft"
-        info="The next 3 highlighted hackathons with the closest start dates will be included in the post."
+        info="The next 2 eligible upcoming hackathons are suggested. Highlights and partner events are prioritised, then the closest start date."
         checklist={[
-          'Have you highlighted the hackathons you want featured in the post?',
+          'Review the suggested hackathons before generating the draft.',
         ]}
         previewItems={workflowCity ? hackathonsLinkedInPreview : undefined}
-        previewLabel="Hackathons to be included"
+        previewLabel="Suggested hackathons"
         city={workflowCity}
         onCityChange={isAdmin ? setSelectedWorkflowCity : undefined}
         onConfirm={confirmWorkflow}
