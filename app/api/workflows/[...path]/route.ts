@@ -5,6 +5,7 @@ import {
   getAccessClaims,
   isAllowedWorkflowPath,
   resolveN8nWorkflowPath,
+  resolveN8nWorkflowPayload,
 } from '@/lib/authorization'
 
 type RouteContext = {
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const city = (payload as Record<string, unknown>).city
   const n8nWebhookPath = resolveN8nWorkflowPath(webhookPath, city)
+  const n8nPayload = resolveN8nWorkflowPayload(webhookPath, city, payload)
 
   const baseUrl = process.env.N8N_ADMIN_WEBHOOK_URL
   const webhookSecret = process.env.N8N_ADMIN_WEBHOOK_SECRET
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         'Content-Type': 'application/json',
         'X-Blau-Admin-Secret': webhookSecret,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(n8nPayload),
     })
 
     const responseText = await response.text()
