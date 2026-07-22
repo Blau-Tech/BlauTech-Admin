@@ -8,6 +8,13 @@ const LINKEDIN_WORKFLOW_PATHS = [
   'blau-network-linkedin-hackathons',
 ] as const
 
+const LINKEDIN_CONTENT_TYPES = {
+  'blau-network-linkedin-events': 'EVENT',
+  'blau-network-linkedin-hackathons': 'HACKATHON',
+} as const
+
+const BERLIN_LINKEDIN_WORKFLOW_PATH = 'blau-network-linkedin-draft-berlin'
+
 const ALLOWED_WORKFLOW_PATHS = [
   ...LINKEDIN_WORKFLOW_PATHS,
   'blau-network-newsletter',
@@ -62,11 +69,31 @@ export function isAllowedWorkflowPath(path: string): boolean {
 }
 
 export function resolveN8nWorkflowPath(path: string, city: unknown): string {
-  if (!(LINKEDIN_WORKFLOW_PATHS as readonly string[]).includes(path) || city === 'BERLIN') {
+  if (!(LINKEDIN_WORKFLOW_PATHS as readonly string[]).includes(path)) {
     return path
   }
 
-  return `${path}-stable`
+  return city === 'BERLIN' ? BERLIN_LINKEDIN_WORKFLOW_PATH : `${path}-stable`
+}
+
+export function resolveN8nWorkflowPayload(
+  path: string,
+  city: unknown,
+  payload: unknown
+): unknown {
+  const contentType = LINKEDIN_CONTENT_TYPES[path as keyof typeof LINKEDIN_CONTENT_TYPES]
+
+  if (
+    city !== 'BERLIN' ||
+    !contentType ||
+    typeof payload !== 'object' ||
+    payload === null ||
+    Array.isArray(payload)
+  ) {
+    return payload
+  }
+
+  return { ...payload, content_type: contentType }
 }
 
 export function authorizeWorkflowRequest(
