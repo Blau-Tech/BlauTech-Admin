@@ -17,6 +17,7 @@ const BERLIN_LINKEDIN_WORKFLOW_PATH = 'blau-network-linkedin-draft-berlin'
 
 const ALLOWED_WORKFLOW_PATHS = [
   ...LINKEDIN_WORKFLOW_PATHS,
+  'berlin-linkedin-post-discovery',
   'blau-network-newsletter',
 ] as const
 
@@ -125,6 +126,16 @@ export function authorizeWorkflowRequest(
   }
 
   const city = (payload as Record<string, unknown>).city
+
+  if (path === 'berlin-linkedin-post-discovery') {
+    const eventId = (payload as Record<string, unknown>).event_id
+    if (city !== 'BERLIN' || typeof eventId !== 'string' || !eventId) {
+      return { allowed: false, status: 400, message: 'A Berlin event is required.' }
+    }
+    return claims.isAdmin || (claims.isCityLead && claims.city === 'BERLIN')
+      ? { allowed: true }
+      : { allowed: false, status: 403, message: 'This preview workflow is Berlin-only.' }
+  }
 
   if (city !== 'MUNICH' && city !== 'BERLIN' && city !== 'MADRID') {
     return { allowed: false, status: 400, message: 'A valid city is required.' }
