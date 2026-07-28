@@ -175,16 +175,34 @@ async function countEventsFiltered(eventType: 'EVENT' | 'HACKATHON', cityFilter?
 
 export const eventsApi = {
   fetch: (cityFilter?: string) => fetchEventsFiltered('EVENT', cityFilter),
-  create: (event: any) => createRecord('events', { is_published: true, ...event, event_type: 'EVENT' }),
+  create: (event: any) => createBerlinListing({ is_published: true, ...event, event_type: 'EVENT' }),
   update: (id: string, updates: any) => updateRecord('events', id, updates),
   delete: (id: string) => deleteRecord('events', id),
 }
 
 export const hackathonsApi = {
   fetch: (cityFilter?: string) => fetchEventsFiltered('HACKATHON', cityFilter),
-  create: (hackathon: any) => createRecord('events', { is_published: true, ...hackathon, event_type: 'HACKATHON' }),
+  create: (hackathon: any) => createBerlinListing({ is_published: true, ...hackathon, event_type: 'HACKATHON' }),
   update: (id: string, updates: any) => updateRecord('events', id, updates),
   delete: (id: string) => deleteRecord('events', id),
+}
+
+async function createBerlinListing(record: any) {
+  const created = await createRecord('events', record)
+
+  if (created?.city === 'BERLIN') {
+    // Discovery is helpful but must never make event creation fail.
+    try {
+      await triggerWorkflow('berlin-linkedin-post-discovery', {
+        city: 'BERLIN',
+        event_id: created.id,
+      })
+    } catch (error) {
+      console.warn('Berlin LinkedIn discovery could not be started:', error)
+    }
+  }
+
+  return created
 }
 
 // Scholarships (flat schema) --------------------------------------------------
