@@ -3,7 +3,6 @@
 import { format } from 'date-fns'
 import Badge from './ui/Badge'
 import InfoRow from './ui/InfoRow'
-import LinkedInCandidatePosts from './LinkedInCandidatePosts'
 
 interface EventDetailViewProps {
   event: any
@@ -169,7 +168,6 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
         />
       </div>
 
-      <LinkedInCandidatePosts event={event} />
 
       <div className="mt-8 pt-6 border-t border-white/40 flex items-center justify-end gap-3">
         <button
