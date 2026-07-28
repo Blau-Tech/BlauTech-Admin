@@ -3,7 +3,6 @@
 import { format } from 'date-fns'
 import Badge from './ui/Badge'
 import InfoRow from './ui/InfoRow'
-import LinkedInCandidatePosts from './LinkedInCandidatePosts'
 
 interface HackathonDetailViewProps {
   hackathon: any
@@ -180,7 +179,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
         />
       </div>
 
-      <LinkedInCandidatePosts event={hackathon} />
 
       <div className="mt-8 pt-6 border-t border-white/40 flex items-center justify-end gap-3">
         <button
