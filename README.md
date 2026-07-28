@@ -1,6 +1,21 @@
 # BlauTech Admin Panel
 
-A separate admin website for managing BlauTech events, hackathons, scholarships, signups, and partner events. This application uses Supabase for authentication and database operations.
+A separate admin website for managing BlauTech listings and Berlin-focused
+publishing workflows. It uses Supabase for authentication and database
+operations.
+
+## System boundary
+
+This repository contains UI shared by the established multi-city admin and the
+new Berlin-focused publishing system.
+
+- Berlin-focused work lives in the workflow proxy, LinkedIn draft previews,
+  publication controls, and the event/hackathon workflow actions.
+- Existing Munich and Madrid CRUD, authorization, and routing behavior is a
+  compatibility boundary. Do not remove or reshape it as part of Berlin
+  cleanup.
+- Stable/legacy n8n workflows live in `BlauTechN8N`. Privileged actions use the
+  authenticated proxy; event intake calls public stable and Berlin endpoints directly.
 
 ## Features
 
@@ -8,8 +23,9 @@ A separate admin website for managing BlauTech events, hackathons, scholarships,
 - 📅 **Events Management**: Full CRUD operations for events
 - 💻 **Hackathons Management**: Full CRUD operations for hackathons
 - 🎓 **Scholarships Management**: Full CRUD operations for scholarships
-- 📝 **Signups Management**: View and delete user signups
-- 🤝 **Partner Events Management**: Full CRUD operations for partner events
+- 🏢 **Organisations Management**: Full CRUD operations for organisations
+- 🔗 **Link Tracking**: View tracked publishing links and click counts
+- ✍️ **Berlin Publishing**: Preview and create reviewed LinkedIn drafts
 - 🎨 **Modern UI**: Built with Next.js, TypeScript, and Tailwind CSS
 
 ## Prerequisites
@@ -19,8 +35,10 @@ A separate admin website for managing BlauTech events, hackathons, scholarships,
   - `events`
   - `hackathons`
   - `scholarships`
-  - `signups`
-  - `partner_events`
+  - `opportunities`
+  - `organisations`
+  - `tracked_links`
+  - `link_clicks`
 
 ## Setup Instructions
 
@@ -83,47 +101,31 @@ The application expects the following table structures:
 - `created_at` (timestamptz, required)
 - `updated_at` (timestamptz, required)
 
-### Signups
-- `id` (uuid, primary key)
-- `full_name` (text, required)
-- `email` (text, required)
-- `phone` (text, optional)
-- `referral` (text, optional)
-- `consent` (bool, required)
-- `created_at` (timestamptz, required)
-
-### Partner Events
-- `id` (int8, primary key)
-- `name` (text, required)
-- `date` (text, required)
-- `description` (text, optional)
-- `link` (text, optional)
-- `organiser` (text, optional)
-- `created_at` (timestamptz, required)
-
 ## Project Structure
 
 ```
 ├── app/
 │   ├── dashboard/          # Admin dashboard pages
 │   │   ├── events/         # Events management
-│   │   ├── hackathons/      # Hackathons management
+│   │   ├── hackathons/     # Hackathons management
 │   │   ├── scholarships/    # Scholarships management
-│   │   ├── signups/         # Signups view
-│   │   └── partner-events/  # Partner events management
+│   │   ├── opportunities/  # Programs and fellowships
+│   │   ├── organisations/  # Organisations management
+│   │   └── link-tracking/  # Publishing link analytics
+│   ├── api/workflows/      # Authenticated n8n proxy
 │   ├── login/               # Login page
 │   └── unauthorized/        # Unauthorized access page
 ├── components/              # Reusable components
 │   ├── Layout.tsx           # Main layout with auth check
 │   ├── Navbar.tsx           # Navigation bar
-│   ├── DataTable.tsx        # Data table component
 │   ├── Modal.tsx            # Modal component
-│   ├── EventForm.tsx        # Form for events/hackathons/scholarships
-│   └── PartnerEventForm.tsx # Form for partner events
+│   └── ui/                  # Shared UI primitives
 └── lib/
     ├── supabase.ts          # Supabase client
     ├── auth.ts              # Authentication utilities
-    └── api.ts               # API functions for CRUD operations
+    ├── authorization.ts     # Roles and workflow allowlist
+    ├── linkedinPreview.ts   # Berlin draft candidate selection
+    └── api.ts               # CRUD and workflow clients
 ```
 
 ## Building for Production
