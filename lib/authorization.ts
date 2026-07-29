@@ -1,5 +1,5 @@
 export type UserRole = 'admin' | 'super_admin' | 'city_lead' | null
-export type CityCode = 'MUNICH' | 'BERLIN' | 'MADRID'
+export type CityCode = 'MUNICH' | 'BERLIN' | 'MADRID' | 'AMSTERDAM'
 
 export const ADMIN_LINKEDIN_CITIES = ['MUNICH', 'BERLIN'] as const satisfies readonly CityCode[]
 
@@ -35,7 +35,10 @@ export function getAccessClaims(user: AuthUser) {
       : null
 
   const city: CityCode | null =
-    cityValue === 'MUNICH' || cityValue === 'BERLIN' || cityValue === 'MADRID'
+    cityValue === 'MUNICH' ||
+    cityValue === 'BERLIN' ||
+    cityValue === 'MADRID' ||
+    cityValue === 'AMSTERDAM'
       ? cityValue
       : null
 

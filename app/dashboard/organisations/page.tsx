@@ -24,7 +24,7 @@ type OrganisationType =
 type Organisation = {
   id: string
   type: OrganisationType
-  city: 'MUNICH' | 'BERLIN' | 'MADRID'
+  city: 'MUNICH' | 'BERLIN' | 'MADRID' | 'AMSTERDAM'
   name: string
   description: string
   website: string | null
@@ -229,7 +229,7 @@ export default function OrganisationsPage() {
         {isAdmin && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-gray-700">City:</span>
-            {(['MUNICH', 'BERLIN', 'MADRID'] as const).map((city) => (
+            {(['MUNICH', 'BERLIN', 'MADRID', 'AMSTERDAM'] as const).map((city) => (
               <button
                 key={city}
                 type="button"

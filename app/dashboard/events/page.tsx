@@ -21,7 +21,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { format, isToday, isTomorrow, startOfDay, isPast } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
-const CITY_OPTIONS: CityCode[] = ['MUNICH', 'BERLIN', 'MADRID']
+const CITY_OPTIONS: CityCode[] = ['MUNICH', 'BERLIN', 'MADRID', 'AMSTERDAM']
 
 export default function EventsPage() {
   const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
@@ -594,7 +594,7 @@ export default function EventsPage() {
           {isAdmin && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-sm font-medium text-gray-700">City:</span>
-              {(['MUNICH', 'BERLIN', 'MADRID'] as const).map((city) => (
+              {(['MUNICH', 'BERLIN', 'MADRID', 'AMSTERDAM'] as const).map((city) => (
                 <button
                   key={city}
                   type="button"

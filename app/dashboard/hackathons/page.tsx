@@ -406,7 +406,7 @@ export default function HackathonsPage() {
         {isAdmin && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="text-sm font-medium text-gray-700">City:</span>
-            {(['MUNICH', 'BERLIN', 'MADRID'] as const).map((city) => (
+            {(['MUNICH', 'BERLIN', 'MADRID', 'AMSTERDAM'] as const).map((city) => (
               <button
                 key={city}
                 type="button"

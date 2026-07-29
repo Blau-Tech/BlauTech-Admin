@@ -15,7 +15,7 @@ type OrganisationType =
   | 'INCUBATOR'
   | 'ACCELERATOR'
 
-type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
+type CityName = 'MUNICH' | 'BERLIN' | 'MADRID' | 'AMSTERDAM'
 
 interface OrganisationFormData {
   type: OrganisationType
@@ -47,6 +47,7 @@ const CITY_OPTIONS: { value: CityName; label: string }[] = [
   { value: 'MUNICH', label: 'Munich' },
   { value: 'BERLIN', label: 'Berlin' },
   { value: 'MADRID', label: 'Madrid' },
+  { value: 'AMSTERDAM', label: 'Amsterdam' },
 ]
 
 const splitCsv = (raw: string): string[] =>

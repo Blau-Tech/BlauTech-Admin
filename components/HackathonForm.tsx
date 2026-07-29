@@ -13,7 +13,7 @@ import {
 } from './ui/FormField'
 
 type EventFormat = 'IN_PERSON' | 'ONLINE' | 'HYBRID'
-type CityName = '' | 'MUNICH' | 'BERLIN' | 'MADRID'
+type CityName = '' | 'MUNICH' | 'BERLIN' | 'MADRID' | 'AMSTERDAM'
 
 interface HackathonFormData {
   name: string
@@ -293,6 +293,7 @@ export default function HackathonForm({ initialData, onSubmit, onCancel }: Hacka
           <option value="MUNICH">Munich</option>
           <option value="BERLIN">Berlin</option>
           <option value="MADRID">Madrid</option>
+          <option value="AMSTERDAM">Amsterdam</option>
         </SelectField>
         <TextField
           id="image_url"

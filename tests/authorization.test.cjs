@@ -49,6 +49,16 @@ test('allows a city lead only with a valid city', () => {
   )
 })
 
+test('allows an Amsterdam city lead from protected app metadata', () => {
+  const claims = getAccessClaims({
+    app_metadata: { role: 'city_lead', city: 'AMSTERDAM' },
+  })
+
+  assert.equal(claims.hasAccess, true)
+  assert.equal(claims.isCityLead, true)
+  assert.equal(claims.city, 'AMSTERDAM')
+})
+
 test('denies city leads with a missing or invalid city', () => {
   for (const city of [undefined, 'HAMBURG', 'berlin']) {
     const claims = getAccessClaims({ app_metadata: { role: 'city_lead', city } })

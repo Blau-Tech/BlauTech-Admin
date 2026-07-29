@@ -15,7 +15,7 @@ type OpportunityType = 'PROGRAM' | 'FELLOWSHIP'
 type Opportunity = {
   id: string
   opportunity_type: OpportunityType
-  cities: ('MUNICH' | 'BERLIN' | 'MADRID')[]
+  cities: ('MUNICH' | 'BERLIN' | 'MADRID' | 'AMSTERDAM')[]
   title: string
   organisation: string
   description: string

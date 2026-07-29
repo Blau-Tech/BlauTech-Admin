@@ -8,9 +8,9 @@ import ErrorBanner from './ui/ErrorBanner'
 import MultiSelect from './ui/MultiSelect'
 import { TextField, TextareaField, CheckboxField } from './ui/FormField'
 
-type CityName = 'MUNICH' | 'BERLIN' | 'MADRID'
+type CityName = 'MUNICH' | 'BERLIN' | 'MADRID' | 'AMSTERDAM'
 
-const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID']
+const CITY_OPTIONS: CityName[] = ['MUNICH', 'BERLIN', 'MADRID', 'AMSTERDAM']
 const STUDY_LEVEL_OPTIONS = ['Bachelor', 'Masters', 'PhD', 'MBA', 'Postdoc']
 const FIELD_OPTIONS = ['Computer Science', 'Business', 'Engineering', 'AI', 'Robotics', 'Medicine', 'Law', 'Other']
 
