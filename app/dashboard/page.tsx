@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [pendingWorkflow, setPendingWorkflow] = useState<'events-linkedin' | 'hackathons-linkedin' | 'newsletter' | null>(null)
   const [selectedWorkflowCity, setSelectedWorkflowCity] = useState<CityCode | null>(null)
   const workflowCity = resolveWorkflowCity(isCityLead, userCity, selectedWorkflowCity)
+  const canGenerateLinkedIn = isAdmin || (isCityLead && userCity === 'BERLIN')
 
   useEffect(() => {
     if (authLoading) return
@@ -279,6 +280,8 @@ export default function Dashboard() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
           <div className="flex flex-wrap gap-3">
+              {canGenerateLinkedIn && (
+                <>
               <button
                 type="button"
                 onClick={() => setPendingWorkflow('events-linkedin')}
@@ -299,6 +302,8 @@ export default function Dashboard() {
                 </svg>
                 Hackathons — Generate LinkedIn Draft
               </button>
+                </>
+              )}
               {isAdmin && (
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 export type UserRole = 'admin' | 'super_admin' | 'city_lead' | null
 export type CityCode = 'MUNICH' | 'BERLIN' | 'MADRID'
 
-export const ADMIN_LINKEDIN_CITIES = ['MUNICH', 'BERLIN'] as const satisfies readonly CityCode[]
+export const ADMIN_LINKEDIN_CITIES = ['BERLIN'] as const satisfies readonly CityCode[]
 
 const LINKEDIN_WORKFLOW_PATHS = [
   'blau-network-linkedin-events',
@@ -73,7 +73,7 @@ export function resolveN8nWorkflowPath(path: string, city: unknown): string {
     return path
   }
 
-  return city === 'BERLIN' ? BERLIN_LINKEDIN_WORKFLOW_PATH : `${path}-stable`
+  return BERLIN_LINKEDIN_WORKFLOW_PATH
 }
 
 export function resolveN8nWorkflowPayload(
@@ -131,12 +131,12 @@ export function authorizeWorkflowRequest(
   }
 
   if (claims.isCityLead) {
-    return city === claims.city
-      ? { allowed: true }
-      : { allowed: false, status: 403, message: 'City leads can only trigger workflows for their assigned city.' }
+    if (city !== claims.city) {
+      return { allowed: false, status: 403, message: 'City leads can only trigger workflows for their assigned city.' }
+    }
   }
 
-  return (ADMIN_LINKEDIN_CITIES as readonly string[]).includes(city)
+  return city === 'BERLIN'
     ? { allowed: true }
-    : { allowed: false, status: 400, message: 'Madrid LinkedIn routing is not available for admins.' }
+    : { allowed: false, status: 400, message: 'LinkedIn draft generation is currently available only for Berlin.' }
 }

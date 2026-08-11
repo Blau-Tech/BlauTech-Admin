@@ -82,13 +82,11 @@ test('allowlists only the deployed Admin workflow paths', () => {
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-events'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-hackathons'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-newsletter'), true)
-  assert.equal(isAllowedWorkflowPath('blau-network-linkedin-events-stable'), false)
-  assert.equal(isAllowedWorkflowPath('blau-network-linkedin-hackathons-stable'), false)
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-draft-berlin'), false)
   assert.equal(isAllowedWorkflowPath('event-link'), false)
 })
 
-test('routes Berlin LinkedIn requests to one worker and other cities to stable workflows', () => {
+test('routes all authorized LinkedIn requests to the Berlin worker', () => {
   assert.equal(
     resolveN8nWorkflowPath('blau-network-linkedin-events', 'BERLIN'),
     'blau-network-linkedin-draft-berlin'
@@ -96,14 +94,6 @@ test('routes Berlin LinkedIn requests to one worker and other cities to stable w
   assert.equal(
     resolveN8nWorkflowPath('blau-network-linkedin-hackathons', 'BERLIN'),
     'blau-network-linkedin-draft-berlin'
-  )
-  assert.equal(
-    resolveN8nWorkflowPath('blau-network-linkedin-events', 'MUNICH'),
-    'blau-network-linkedin-events-stable'
-  )
-  assert.equal(
-    resolveN8nWorkflowPath('blau-network-linkedin-hackathons', 'MADRID'),
-    'blau-network-linkedin-hackathons-stable'
   )
   assert.equal(
     resolveN8nWorkflowPath('blau-network-newsletter', undefined),
@@ -165,17 +155,18 @@ test('authorizes the public path before selecting its internal n8n route', () =>
   assert.match(routeSource, /'X-Blau-Admin-Secret': webhookSecret/)
 })
 
-test('authorizes LinkedIn cities by protected role and assignment', () => {
+test('authorizes Berlin LinkedIn drafts and rejects removed city routes', () => {
   const admin = getAccessClaims({ app_metadata: { role: 'admin' } })
   const berlinLead = getAccessClaims({ app_metadata: { role: 'city_lead', city: 'BERLIN' } })
   const madridLead = getAccessClaims({ app_metadata: { role: 'city_lead', city: 'MADRID' } })
 
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MUNICH', test_mode: false }, admin).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'BERLIN', test_mode: false }, admin).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MUNICH', test_mode: false }, admin).status, 400)
   assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MADRID', test_mode: true }, admin).status, 400)
   assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { test_mode: true }, admin).status, 400)
   assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'BERLIN', test_mode: true }, berlinLead).allowed, true)
   assert.equal(authorizeWorkflowRequest('blau-network-linkedin-events', { city: 'MUNICH', test_mode: true }, berlinLead).status, 403)
-  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-hackathons', { city: 'MADRID', test_mode: false }, madridLead).allowed, true)
+  assert.equal(authorizeWorkflowRequest('blau-network-linkedin-hackathons', { city: 'MADRID', test_mode: false }, madridLead).status, 400)
 })
 
 test('restricts newsletters to full admins and rejects unknown workflows', () => {
