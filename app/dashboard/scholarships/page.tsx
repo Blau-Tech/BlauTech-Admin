@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import ScholarshipForm from '@/components/ScholarshipForm'
+import ScholarshipIntakePanel from '@/components/ScholarshipIntakePanel'
 import { scholarshipsApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import GlassCard from '@/components/ui/GlassCard'
@@ -12,13 +13,12 @@ import ErrorBanner from '@/components/ui/ErrorBanner'
 import SuccessBanner from '@/components/ui/SuccessBanner'
 import SearchBar from '@/components/ui/SearchBar'
 import Badge from '@/components/ui/Badge'
-import Link from 'next/link'
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns'
 
 type ViewMode = 'card' | 'table' | 'chronological'
 
 export default function ScholarshipsPage() {
-  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
   const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [scholarships, setScholarships] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -262,11 +262,7 @@ export default function ScholarshipsPage() {
           className="mb-6"
         />
 
-        <div className="mb-8 text-center">
-          <Link href="/dashboard/events#link-uploader" className="text-sm font-medium text-primary-600 hover:text-primary-800">
-            Upload a scholarship link with the universal uploader →
-          </Link>
-        </div>
+        {isAdmin && <ScholarshipIntakePanel onPublished={loadScholarships} />}
 
         {/* Display */}
         {filteredScholarships.length === 0 ? (

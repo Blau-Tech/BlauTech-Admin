@@ -82,6 +82,7 @@ test('allowlists only the deployed Admin workflow paths', () => {
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-events'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-hackathons'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-newsletter'), true)
+  assert.equal(isAllowedWorkflowPath('scholarships/intake'), true)
   assert.equal(isAllowedWorkflowPath('blau-network-linkedin-draft-berlin'), false)
   assert.equal(isAllowedWorkflowPath('event-link'), false)
 })
@@ -98,6 +99,10 @@ test('routes all authorized LinkedIn requests to the Berlin worker', () => {
   assert.equal(
     resolveN8nWorkflowPath('blau-network-newsletter', undefined),
     'blau-network-newsletter'
+  )
+  assert.equal(
+    resolveN8nWorkflowPath('scholarships/intake', undefined),
+    'scholarships/intake'
   )
 })
 
@@ -176,6 +181,43 @@ test('restricts newsletters to full admins and rejects unknown workflows', () =>
   assert.equal(authorizeWorkflowRequest('blau-network-newsletter', { test_mode: false }, admin).allowed, true)
   assert.equal(authorizeWorkflowRequest('blau-network-newsletter', { test_mode: true }, cityLead).status, 403)
   assert.equal(authorizeWorkflowRequest('not-real', { test_mode: true }, admin).status, 404)
+})
+
+test('restricts scholarship extraction to full-admin HTTPS previews', () => {
+  const admin = getAccessClaims({ app_metadata: { role: 'admin' } })
+  const cityLead = getAccessClaims({ app_metadata: { role: 'city_lead', city: 'BERLIN' } })
+
+  assert.equal(
+    authorizeWorkflowRequest(
+      'scholarships/intake',
+      { url: 'https://provider.example/scholarship', test_mode: true },
+      admin
+    ).allowed,
+    true
+  )
+  assert.equal(
+    authorizeWorkflowRequest(
+      'scholarships/intake',
+      { url: 'https://provider.example/scholarship', test_mode: true },
+      cityLead
+    ).status,
+    403
+  )
+  assert.equal(
+    authorizeWorkflowRequest(
+      'scholarships/intake',
+      { url: 'https://provider.example/scholarship', test_mode: false },
+      admin
+    ).status,
+    400
+  )
+
+  for (const url of [undefined, 'not-a-url', 'http://provider.example/scholarship', 'https://user:secret@provider.example']) {
+    assert.equal(
+      authorizeWorkflowRequest('scholarships/intake', { url, test_mode: true }, admin).status,
+      400
+    )
+  }
 })
 
 test('requires test_mode to be a real boolean', () => {
