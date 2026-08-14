@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import type {
+  ScholarshipPreviewResponse,
+  ScholarshipReviewPayload,
+} from './scholarshipIntake'
 
 // Tables where city is a single text column (vs. an array)
 const SINGLE_CITY_TABLES = new Set(['events', 'organisations'])
@@ -193,6 +197,41 @@ export const scholarshipsApi = {
   create: (scholarship: any) => createRecord('scholarships', { is_published: true, ...scholarship }),
   update: (id: string, updates: any) => updateRecord('scholarships', id, updates),
   delete: (id: string) => deleteRecord('scholarships', id),
+  preview: (url: string) => requestWorkflow<ScholarshipPreviewResponse>(
+    'scholarships/intake',
+    { url, test_mode: true }
+  ),
+  async publishReviewed(payload: ScholarshipReviewPayload) {
+    const { data, error } = await supabase.rpc('publish_reviewed_scholarship', {
+      p_payload: payload,
+    })
+
+    if (error) {
+      if (error.code === '42501') throw new Error('Only full admins can publish reviewed scholarships.')
+      throw new Error(error.message || 'Failed to publish reviewed scholarship.')
+    }
+
+    return data as {
+      status: 'PUBLISHED' | 'DUPLICATE'
+      scholarship_id: string
+      created: boolean
+      reviewed_existing?: boolean
+    }
+  },
+  async fetchTaxonomy() {
+    const [eligibilities, benefits] = await Promise.all([
+      supabase.from('eligibility_types').select('key, name, category').order('category').order('name'),
+      supabase.from('benefit_types').select('key, name').order('name'),
+    ])
+
+    if (eligibilities.error) throw new Error(eligibilities.error.message)
+    if (benefits.error) throw new Error(benefits.error.message)
+
+    return {
+      eligibilities: eligibilities.data || [],
+      benefits: benefits.data || [],
+    }
+  },
 }
 
 // Organisations (replaces student_clubs) --------------------------------------
@@ -438,7 +477,7 @@ export const linkTrackingApi = {
  * @param path    - The n8n webhook endpoint path
  * @param payload - Any JSON-serializable body to send with the request
  */
-export async function triggerWorkflow(path: string, payload: unknown = {}): Promise<void> {
+export async function requestWorkflow<T>(path: string, payload: unknown = {}): Promise<T> {
   const url = `/api/workflows/${path.replace(/^\/+/, '')}`
   const { data: { session }, error } = await supabase.auth.getSession()
 
@@ -455,8 +494,22 @@ export async function triggerWorkflow(path: string, payload: unknown = {}): Prom
     body: JSON.stringify(payload),
   })
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.message || response.statusText || 'Workflow request failed.')
+  const responseText = await response.text()
+  let data: any = null
+
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText)
+    } catch {
+      if (response.ok) throw new Error('Workflow returned an invalid response.')
+    }
   }
+
+  if (!response.ok) throw new Error(data?.message || response.statusText || 'Workflow request failed.')
+
+  return data as T
+}
+
+export async function triggerWorkflow(path: string, payload: unknown = {}): Promise<void> {
+  await requestWorkflow(path, payload)
 }
