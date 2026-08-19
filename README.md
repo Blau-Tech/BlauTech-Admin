@@ -17,6 +17,18 @@ new Berlin-focused publishing system.
 - Stable/legacy n8n workflows live in `BlauTechN8N`. Privileged actions use the
   authenticated proxy; event intake calls public stable and Berlin endpoints directly.
 
+## Publishing controls
+
+- Events and hackathons are eligible for publishing when they are approved with
+  `is_published`; `posted_newsletter`, `posted_linkedin`, and `drafted_linkedin`
+  track channel state and prevent duplicate selection.
+- `partner_event` remains an event presentation and Berlin LinkedIn priority
+  flag; partner rows are ordered nearest-first within that priority group.
+- Events and hackathons have no Admin highlight control. Newsletter and LinkedIn
+  selection do not read their legacy `is_highlight` values.
+- Highlight controls remain for scholarships, opportunities, and organisations,
+  where they select featured public-site content.
+
 ## Features
 
 - 🔐 **Protected Authentication**: Full admins and city-scoped city leads can access the panel

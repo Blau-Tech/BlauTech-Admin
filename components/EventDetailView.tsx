@@ -34,7 +34,6 @@ export default function EventDetailView({ event, onEdit, onDelete, onClose }: Ev
               )}
               {event.city && <Badge color="gray">{event.city}</Badge>}
               {event.is_published === false && <Badge color="amber">Needs approval</Badge>}
-              {event.is_highlight && <Badge color="yellow">Highlight</Badge>}
               {event.partner_event && <Badge color="indigo">Partner Event</Badge>}
             </div>
           </div>

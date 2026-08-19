@@ -45,7 +45,6 @@ export default function EventsPage() {
   const canGenerateLinkedIn = isAdmin || (isCityLead && userCity === 'BERLIN')
 
   // Boolean filters - when true, show only events where that attribute is NOT set
-  const [filterNotHighlighted, setFilterNotHighlighted] = useState(false)
   const [filterNotLinkedIn, setFilterNotLinkedIn] = useState(false)
   const [filterNotWhatsApp, setFilterNotWhatsApp] = useState(false)
   const [filterNotNewsletter, setFilterNotNewsletter] = useState(false)
@@ -126,16 +125,6 @@ export default function EventsPage() {
       await loadEvents()
     } catch (err: any) {
       setError(err.message)
-    }
-  }
-
-  const handleToggleHighlight = async (event: any, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent opening detail view
-    try {
-      await eventsApi.update(event.id, { is_highlight: !event.is_highlight })
-      await loadEvents()
-    } catch (err: any) {
-      setError(err.message || 'Failed to update highlight status')
     }
   }
 
@@ -346,9 +335,6 @@ export default function EventsPage() {
     }
 
     // Boolean filters - show only events where the attribute is NOT set
-    if (filterNotHighlighted) {
-      filtered = filtered.filter((event) => !event.is_highlight)
-    }
     if (filterNotLinkedIn) {
       filtered = filtered.filter((event) => !event.posted_linkedin)
     }
@@ -360,7 +346,7 @@ export default function EventsPage() {
     }
 
     return filtered
-  }, [events, searchQuery, selectedCity, hidePastEvents, filterNotHighlighted, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
+  }, [events, searchQuery, selectedCity, hidePastEvents, filterNotLinkedIn, filterNotWhatsApp, filterNotNewsletter])
 
   const sortedFilteredEvents = useMemo(() => {
     const sorted = [...filteredEvents].sort(compareEventsByDateTime)
@@ -405,9 +391,6 @@ export default function EventsPage() {
       render: (value: any, row: any) => (
         <div>
           <div className="font-medium text-gray-900 flex items-center gap-2">
-            {row.is_highlight && (
-              <span className="text-yellow-500" title="Highlighted">⭐</span>
-            )}
             {value || '-'}
             {row.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
           </div>
@@ -650,20 +633,6 @@ export default function EventsPage() {
             <span className="text-sm font-medium text-gray-700">Show only:</span>
             <button
               type="button"
-              onClick={() => setFilterNotHighlighted(!filterNotHighlighted)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
-                filterNotHighlighted
-                  ? 'bg-green-100/80 text-green-800 ring-2 ring-green-300/60 shadow-sm'
-                  : 'bg-white/40 text-gray-700 hover:bg-white/60 ring-1 ring-white/40'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              Not Highlighted
-            </button>
-            <button
-              type="button"
               onClick={() => setFilterNotLinkedIn(!filterNotLinkedIn)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all ${
                 filterNotLinkedIn
@@ -704,11 +673,10 @@ export default function EventsPage() {
               </svg>
               Not in Newsletter
             </button>
-            {(filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents || selectedCity) && (
+            {(filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents || selectedCity) && (
               <button
                 type="button"
                 onClick={() => {
-                  setFilterNotHighlighted(false)
                   setFilterNotLinkedIn(false)
                   setFilterNotWhatsApp(false)
                   setFilterNotNewsletter(false)
@@ -734,11 +702,10 @@ export default function EventsPage() {
                 ? 'No events available'
                 : 'No events match your search criteria or filters'}
             </p>
-            {(searchQuery || filterNotHighlighted || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents || selectedCity) && (
+            {(searchQuery || filterNotLinkedIn || filterNotWhatsApp || filterNotNewsletter || hidePastEvents || selectedCity) && (
               <button
                 onClick={() => {
                   setSearchQuery('')
-                  setFilterNotHighlighted(false)
                   setFilterNotLinkedIn(false)
                   setFilterNotWhatsApp(false)
                   setFilterNotNewsletter(false)
@@ -759,14 +726,12 @@ export default function EventsPage() {
                 key={event.id}
                 onClick={() => handleViewDetails(event)}
                 className={`group relative rounded-3xl backdrop-blur-xl transition-all duration-300 overflow-hidden cursor-pointer border hover:-translate-y-1 ${
-                  event.is_highlight
-                    ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-yellow-200/30 shadow-lg'
-                    : event.partner_event
+                  event.partner_event
                     ? 'bg-gradient-to-br from-blue-100/60 to-sky-100/60 border-blue-300/70 hover:border-blue-400 hover:shadow-xl shadow-blue-200/30 shadow-lg'
                     : 'glass hover:shadow-xl hover:bg-white/70'
                 }`}
               >
-                {/* Toggle buttons: Partner Event (blue) + Highlight (yellow) */}
+                {/* Partner-event publishing control */}
                 <div className="absolute top-4 right-4 z-10 flex gap-2">
                   <button
                     onClick={(e) => handleTogglePartnerEvent(event, e)}
@@ -781,19 +746,6 @@ export default function EventsPage() {
                       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  <button
-                    onClick={(e) => handleToggleHighlight(event, e)}
-                    className={`p-2 rounded-full transition-all duration-200 backdrop-blur-sm ${
-                      event.is_highlight
-                        ? 'bg-yellow-400/90 text-yellow-900 hover:bg-yellow-500 shadow-md ring-1 ring-yellow-300/60'
-                        : 'bg-white/50 text-gray-400 hover:bg-white/70 hover:text-yellow-500 ring-1 ring-white/40'
-                    }`}
-                    title={event.is_highlight ? 'Remove highlight' : 'Add highlight'}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </button>
                 </div>
 
                 <div className="px-6 pt-6 pb-4">
@@ -806,7 +758,6 @@ export default function EventsPage() {
                         {event.format && <Badge color="blue" size="sm">{formatFormatLabel(event.format)}</Badge>}
                         {event.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {event.partner_event && <Badge color="blue" size="sm">Partner</Badge>}
-                        {event.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                       </div>
                     </div>
                   </div>
@@ -918,11 +869,7 @@ export default function EventsPage() {
                       {sortedFilteredEvents.map((event) => (
                         <tr
                           key={event.id}
-                          className={`transition-colors ${
-                            event.is_highlight
-                              ? 'bg-yellow-100/40 hover:bg-yellow-100/60 border-l-4 border-yellow-400'
-                              : 'hover:bg-white/40'
-                          }`}
+                          className="transition-colors hover:bg-white/40"
                         >
                           {tableColumns.map((column) => (
                             <td
@@ -994,11 +941,7 @@ export default function EventsPage() {
                       <div
                         key={event.id}
                         onClick={() => handleViewDetails(event)}
-                        className={`group rounded-3xl backdrop-blur-xl border transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5 ${
-                          event.is_highlight
-                            ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-md shadow-yellow-200/30'
-                            : 'glass hover:shadow-lg hover:bg-white/70'
-                        }`}
+                        className="group rounded-3xl backdrop-blur-xl border transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5 glass hover:shadow-lg hover:bg-white/70"
                       >
                         <div className="p-6">
                           <div className="flex items-start justify-between gap-4">
@@ -1035,7 +978,6 @@ export default function EventsPage() {
                                 <div className="flex items-center gap-2 flex-wrap mt-3">
                                   <Badge color="blue" size="sm">{formatFormatLabel(event.format)}</Badge>
                                   {event.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
-                                  {event.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                                 </div>
                               )}
                             </div>
@@ -1111,7 +1053,7 @@ export default function EventsPage() {
       <ConfirmModal
         isOpen={linkedInConfirmOpen}
         title="Generate Events LinkedIn Draft"
-        info="The next 4 eligible upcoming events are suggested. Highlights and partner events are prioritised, then the closest start date."
+        info="The next 4 eligible upcoming events are suggested. Partner events are prioritised, then candidates are ordered nearest-first by date and time."
         checklist={[
           'Review the suggested events before generating the draft.',
         ]}

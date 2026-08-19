@@ -112,16 +112,6 @@ export default function HackathonsPage() {
     }
   }
 
-  const handleToggleHighlight = async (hackathon: any, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent opening detail view
-    try {
-      await hackathonsApi.update(hackathon.id, { is_highlight: !hackathon.is_highlight })
-      await loadHackathons()
-    } catch (err: any) {
-      setError(err.message || 'Failed to update highlight status')
-    }
-  }
-
   const handleSubmit = async (data: any) => {
     try {
       setError('')
@@ -271,9 +261,6 @@ export default function HackathonsPage() {
       render: (value: any, row: any) => (
         <div>
           <div className="font-medium text-gray-900 flex items-center gap-2">
-            {row.is_highlight && (
-              <span className="text-yellow-500" title="Highlighted">⭐</span>
-            )}
             {value || row.title || '-'}
             {row.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
           </div>
@@ -468,25 +455,8 @@ export default function HackathonsPage() {
               <div
                 key={hackathon.id}
                 onClick={() => handleViewDetails(hackathon)}
-                className={`group relative rounded-3xl backdrop-blur-xl transition-all duration-300 overflow-hidden cursor-pointer border hover:-translate-y-1 ${
-                  hackathon.is_highlight
-                    ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-yellow-200/30 shadow-lg'
-                    : 'glass hover:shadow-xl hover:bg-white/70'
-                }`}
+                className="group relative rounded-3xl backdrop-blur-xl transition-all duration-300 overflow-hidden cursor-pointer border hover:-translate-y-1 glass hover:shadow-xl hover:bg-white/70"
               >
-                <button
-                  onClick={(e) => handleToggleHighlight(hackathon, e)}
-                  className={`absolute top-4 right-4 z-10 p-2 rounded-full transition-all duration-200 backdrop-blur-sm ${
-                    hackathon.is_highlight
-                      ? 'bg-yellow-400/90 text-yellow-900 hover:bg-yellow-500 shadow-md ring-1 ring-yellow-300/60'
-                      : 'bg-white/50 text-gray-400 hover:bg-white/70 hover:text-yellow-500 ring-1 ring-white/40'
-                  }`}
-                  title={hackathon.is_highlight ? 'Remove highlight' : 'Add highlight'}
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                </button>
 
                 <div className="px-6 pt-6 pb-4">
                   <div className="flex items-start justify-between mb-3">
@@ -496,7 +466,6 @@ export default function HackathonsPage() {
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
                         {hackathon.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
-                        {hackathon.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                       </div>
                     </div>
                   </div>
@@ -645,11 +614,7 @@ export default function HackathonsPage() {
                       {filteredHackathons.map((hackathon) => (
                         <tr
                           key={hackathon.id}
-                          className={`transition-colors ${
-                            hackathon.is_highlight
-                              ? 'bg-yellow-100/40 hover:bg-yellow-100/60 border-l-4 border-yellow-400'
-                              : 'hover:bg-white/40'
-                          }`}
+                          className="transition-colors hover:bg-white/40"
                         >
                           {tableColumns.map((column) => (
                             <td
@@ -720,11 +685,7 @@ export default function HackathonsPage() {
                       <div
                         key={hackathon.id}
                         onClick={() => handleViewDetails(hackathon)}
-                        className={`group rounded-3xl backdrop-blur-xl border transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5 ${
-                          hackathon.is_highlight
-                            ? 'bg-gradient-to-br from-yellow-100/60 to-amber-100/60 border-yellow-300/70 hover:border-yellow-400 hover:shadow-xl shadow-md shadow-yellow-200/30'
-                            : 'glass hover:shadow-lg hover:bg-white/70'
-                        }`}
+                        className="group rounded-3xl backdrop-blur-xl border transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5 glass hover:shadow-lg hover:bg-white/70"
                       >
                         <div className="p-6">
                           <div className="flex items-start justify-between gap-4">
@@ -740,7 +701,6 @@ export default function HackathonsPage() {
                                   {hackathon.name || hackathon.title}
                                 </h3>
                                 {hackathon.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
-                                {hackathon.is_highlight && <Badge color="yellow" size="sm">⭐ Highlight</Badge>}
                               </div>
 
                               {hackathon.organisers && (
@@ -839,7 +799,7 @@ export default function HackathonsPage() {
       <ConfirmModal
         isOpen={linkedInConfirmOpen}
         title="Generate Hackathons LinkedIn Draft"
-        info="The next 2 eligible upcoming hackathons are suggested. Highlights and partner events are prioritised, then the closest start date."
+        info="The next 2 eligible upcoming hackathons are suggested. Partner hackathons are prioritised, then candidates are ordered nearest-first by date and time."
         checklist={[
           'Review the suggested hackathons before generating the draft.',
         ]}

@@ -34,7 +34,6 @@ interface EventFormData {
   posted_linkedin?: boolean
   posted_whatsapp?: boolean
   posted_newsletter?: boolean
-  is_highlight?: boolean
   is_published?: boolean
 }
 
@@ -65,7 +64,6 @@ const normaliseTime = (value: string | undefined): string | null => {
 const FLAGS: { id: keyof EventFormData; label: string }[] = [
   { id: 'is_published', label: 'Published on public website (approve)' },
   { id: 'partner_event', label: 'Partner Event' },
-  { id: 'is_highlight', label: 'Highlight Event' },
   { id: 'posted_linkedin', label: 'Posted on LinkedIn' },
   { id: 'posted_whatsapp', label: 'Posted on WhatsApp' },
   { id: 'posted_newsletter', label: 'Posted in Newsletter' },
@@ -99,7 +97,6 @@ export default function EventForm({ initialData, onSubmit, onCancel }: EventForm
         posted_linkedin: initialData.posted_linkedin || false,
         posted_whatsapp: initialData.posted_whatsapp || false,
         posted_newsletter: initialData.posted_newsletter || false,
-        is_highlight: initialData.is_highlight || false,
         is_published: initialData.is_published ?? true,
       })
     } else {
@@ -122,7 +119,6 @@ export default function EventForm({ initialData, onSubmit, onCancel }: EventForm
         posted_linkedin: false,
         posted_whatsapp: false,
         posted_newsletter: false,
-        is_highlight: false,
         is_published: true,
       })
     }
@@ -172,7 +168,6 @@ export default function EventForm({ initialData, onSubmit, onCancel }: EventForm
         posted_linkedin: !!data.posted_linkedin,
         posted_whatsapp: !!data.posted_whatsapp,
         posted_newsletter: !!data.posted_newsletter,
-        is_highlight: !!data.is_highlight,
         is_published: !!data.is_published,
       }
 
