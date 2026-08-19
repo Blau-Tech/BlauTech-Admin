@@ -6,7 +6,6 @@ interface LinkedInPreviewCandidate {
   start_date?: string | null
   start_time?: string | null
   is_published?: boolean | null
-  is_highlight?: boolean | null
   partner_event?: boolean | null
   posted_linkedin?: boolean | null
   drafted_linkedin?: boolean | null
@@ -29,7 +28,6 @@ export function selectLinkedInPreview(
       (item.start_date?.slice(0, 10) ?? '') > today
     )
     .sort((a, b) =>
-      Number(Boolean(b.is_highlight)) - Number(Boolean(a.is_highlight)) ||
       Number(Boolean(b.partner_event)) - Number(Boolean(a.partner_event)) ||
       (a.start_date ?? '').localeCompare(b.start_date ?? '') ||
       (a.start_time ?? '\uffff').localeCompare(b.start_time ?? '\uffff') ||

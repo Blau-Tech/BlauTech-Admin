@@ -338,7 +338,7 @@ export default function Dashboard() {
       <ConfirmModal
         isOpen={pendingWorkflow === 'events-linkedin'}
         title="Generate Events LinkedIn Draft"
-        info="The next 4 eligible upcoming events are suggested. Highlights and partner events are prioritised, then the closest start date."
+        info="The next 4 eligible upcoming events are suggested. Partner events are prioritised, then candidates are ordered nearest-first by date and time."
         checklist={[
           'Review the suggested events before generating the draft.',
         ]}
@@ -356,7 +356,7 @@ export default function Dashboard() {
       <ConfirmModal
         isOpen={pendingWorkflow === 'hackathons-linkedin'}
         title="Generate Hackathons LinkedIn Draft"
-        info="The next 2 eligible upcoming hackathons are suggested. Highlights and partner events are prioritised, then the closest start date."
+        info="The next 2 eligible upcoming hackathons are suggested. Partner hackathons are prioritised, then candidates are ordered nearest-first by date and time."
         checklist={[
           'Review the suggested hackathons before generating the draft.',
         ]}
@@ -375,8 +375,8 @@ export default function Dashboard() {
         isOpen={pendingWorkflow === 'newsletter'}
         title="Generate Newsletter Draft"
         checklist={[
-          'Have you highlighted the events to include in the newsletter?',
-          'Have you highlighted the hackathons to include in the newsletter?',
+          'Eligible published, unposted items are selected automatically by date.',
+          'Review the email draft before Beehiiv publishing, then mark included items Posted in Newsletter.',
         ]}
         onConfirm={confirmWorkflow}
         onCancel={() => setPendingWorkflow(null)}

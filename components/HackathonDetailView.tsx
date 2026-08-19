@@ -26,7 +26,6 @@ export default function HackathonDetailView({ hackathon, onEdit, onDelete, onClo
             <h2 className="text-2xl font-bold text-gray-900 mb-3">{hackathon.name || hackathon.title}</h2>
             <div className="flex items-center gap-2 flex-wrap">
               {hackathon.is_published === false && <Badge color="amber">Needs approval</Badge>}
-              {hackathon.is_highlight && <Badge color="yellow">Highlight</Badge>}
             </div>
           </div>
         </div>

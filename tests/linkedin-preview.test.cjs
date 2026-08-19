@@ -21,15 +21,15 @@ new Function('module', 'exports', 'require', compiled)(
 
 const { selectLinkedInPreview } = previewModule.exports
 
-test('selects eligible LinkedIn items in highlight, partner, date, time, and id order', () => {
+test('selects eligible LinkedIn items by partner, date, time, and id without highlight priority', () => {
   const defaults = { city: 'BERLIN', is_published: true, start_date: '2030-05-03' }
   const candidates = [
-    { ...defaults, id: 'plain', name: 'Plain' },
-    { ...defaults, id: 'partner', name: 'Partner', partner_event: true, start_date: '2030-05-04' },
-    { ...defaults, id: 'highlight-early', name: 'Highlight Early', is_highlight: true, start_date: '2030-05-02' },
-    { ...defaults, id: 'highlight-b', name: 'Highlight B', is_highlight: true, start_time: '09:00' },
-    { ...defaults, id: 'highlight-a', name: 'Highlight A', is_highlight: true, start_time: '09:00' },
-    { ...defaults, id: 'highlight-late', name: 'Highlight Late', is_highlight: true, start_time: '10:00' },
+    { ...defaults, id: 'near', name: 'Near', start_date: '2030-05-02', start_time: '20:00' },
+    { ...defaults, id: 'z-partner', name: 'Partner', partner_event: true, start_date: '2030-05-05', start_time: '09:00' },
+    { ...defaults, id: 'a-unhighlighted', name: 'Unhighlighted', start_time: '09:00' },
+    { ...defaults, id: 'b-highlighted', name: 'Highlighted', is_highlight: true, start_time: '09:00' },
+    { ...defaults, id: 'later-time', name: 'Later Time', start_time: '10:00' },
+    { ...defaults, id: 'highlighted-far', name: 'Highlighted Far', is_highlight: true, start_date: '2030-05-04', start_time: '08:00' },
     { ...defaults, id: 'drafted', name: 'Drafted', drafted_linkedin: true },
     { ...defaults, id: 'posted', name: 'Posted', posted_linkedin: true },
     { ...defaults, id: 'unpublished', name: 'Unpublished', is_published: false },
@@ -39,10 +39,10 @@ test('selects eligible LinkedIn items in highlight, partner, date, time, and id 
 
   assert.deepEqual(
     selectLinkedInPreview(candidates, 'BERLIN', '2030-05-01', 10).map((item) => item.id),
-    ['highlight-early', 'highlight-a', 'highlight-b', 'highlight-late', 'partner', 'plain']
+    ['z-partner', 'near', 'a-unhighlighted', 'b-highlighted', 'later-time', 'highlighted-far']
   )
   assert.deepEqual(
     selectLinkedInPreview(candidates, 'BERLIN', '2030-05-01', 2).map((item) => item.id),
-    ['highlight-early', 'highlight-a']
+    ['z-partner', 'near']
   )
 })
