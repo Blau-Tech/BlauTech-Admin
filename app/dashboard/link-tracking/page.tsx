@@ -176,7 +176,7 @@ export default function LinkTrackingPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Link Tracking</h1>
           <p className="text-gray-600">
-            See where your users come from — click analytics for events, hackathons, scholarships, and opportunities.
+            See where your users come from — click analytics for events, hackathons, and opportunities.
           </p>
         </div>
 

@@ -24,7 +24,6 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
   { name: 'Events', href: '/dashboard/events' },
   { name: 'Hackathons', href: '/dashboard/hackathons' },
-  { name: 'Scholarships', href: '/dashboard/scholarships' },
   { name: 'Opportunities', href: '/dashboard/opportunities' },
   { name: 'Organisations', href: '/dashboard/organisations' },
   { name: 'Links', href: '/dashboard/link-tracking' },

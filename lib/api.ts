@@ -1,13 +1,9 @@
 import { supabase } from './supabase'
-import type {
-  ScholarshipPreviewResponse,
-  ScholarshipReviewPayload,
-} from './scholarshipIntake'
 
 // Tables where city is a single text column (vs. an array)
 const SINGLE_CITY_TABLES = new Set(['events', 'organisations'])
 // Tables where the city is stored as an array column called `cities`
-const MULTI_CITY_TABLES = new Set(['scholarships', 'opportunities'])
+const MULTI_CITY_TABLES = new Set(['opportunities'])
 
 function applyCityFilter(query: any, tableName: string, cityFilter?: string) {
   if (!cityFilter) return query
@@ -191,49 +187,6 @@ export const hackathonsApi = {
   delete: (id: string) => deleteRecord('events', id),
 }
 
-// Scholarships (flat schema) --------------------------------------------------
-export const scholarshipsApi = {
-  fetch: (cityFilter?: string) => fetchTable('scholarships', cityFilter),
-  create: (scholarship: any) => createRecord('scholarships', { is_published: true, ...scholarship }),
-  update: (id: string, updates: any) => updateRecord('scholarships', id, updates),
-  delete: (id: string) => deleteRecord('scholarships', id),
-  preview: (url: string) => requestWorkflow<ScholarshipPreviewResponse>(
-    'scholarships/intake',
-    { url, test_mode: true }
-  ),
-  async publishReviewed(payload: ScholarshipReviewPayload) {
-    const { data, error } = await supabase.rpc('publish_reviewed_scholarship', {
-      p_payload: payload,
-    })
-
-    if (error) {
-      if (error.code === '42501') throw new Error('Only full admins can publish reviewed scholarships.')
-      throw new Error(error.message || 'Failed to publish reviewed scholarship.')
-    }
-
-    return data as {
-      status: 'PUBLISHED' | 'DUPLICATE'
-      scholarship_id: string
-      created: boolean
-      reviewed_existing?: boolean
-    }
-  },
-  async fetchTaxonomy() {
-    const [eligibilities, benefits] = await Promise.all([
-      supabase.from('eligibility_types').select('key, name, category').order('category').order('name'),
-      supabase.from('benefit_types').select('key, name').order('name'),
-    ])
-
-    if (eligibilities.error) throw new Error(eligibilities.error.message)
-    if (benefits.error) throw new Error(benefits.error.message)
-
-    return {
-      eligibilities: eligibilities.data || [],
-      benefits: benefits.data || [],
-    }
-  },
-}
-
 // Organisations (replaces student_clubs) --------------------------------------
 export const organisationsApi = {
   fetch: (cityFilter?: string) => fetchTable('organisations', cityFilter),
@@ -278,7 +231,6 @@ export async function getTableCount(tableName: string, cityFilter?: string): Pro
 export const dashboardStats = {
   getEventsCount: (cityFilter?: string) => countEventsFiltered('EVENT', cityFilter),
   getHackathonsCount: (cityFilter?: string) => countEventsFiltered('HACKATHON', cityFilter),
-  getScholarshipsCount: (cityFilter?: string) => getTableCount('scholarships', cityFilter),
   getOpportunitiesCount: (cityFilter?: string) => getTableCount('opportunities', cityFilter),
   getOrganisationsCount: (cityFilter?: string) => getTableCount('organisations', cityFilter),
 }
@@ -310,16 +262,6 @@ export const itemNameApi = {
     if (error) { console.error('Error fetching hackathon names:', error); return [] }
     return (data || []).map((row: any) => ({ id: row.id, name: row.name }))
   },
-
-  async fetchScholarshipNames(cityFilter?: string) {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return []
-    let query = supabase.from('scholarships').select('id, title')
-    if (cityFilter) query = query.contains('cities', [cityFilter])
-    const { data, error } = await query
-    if (error) { console.error('Error fetching scholarship names:', error); return [] }
-    return (data || []).map((row: any) => ({ id: row.id, name: row.title }))
-  },
 }
 
 // Link tracking analytics ----------------------------------------------------
@@ -330,10 +272,9 @@ export interface TrackedLinkWithStats {
   channel: 'WHATSAPP' | 'LINKEDIN' | 'WEBSITE' | 'NEWSLETTER'
   slug: string
   event_id?: string | null
-  scholarship_id?: string | null
   opportunity_id?: string | null
   entity_id: string
-  entity_type: 'EVENT' | 'HACKATHON' | 'SCHOLARSHIP' | 'OPPORTUNITY'
+  entity_type: 'EVENT' | 'HACKATHON' | 'OPPORTUNITY'
   entity_name?: string | null
   entity_city?: string | null
   event_name?: string | null
@@ -368,7 +309,7 @@ export const linkTrackingApi = {
     const city = cityFilter?.toUpperCase()
     const query = supabase
       .from('tracked_links')
-      .select('*, events(name, city, event_type), scholarships(title, cities), opportunities(title, cities), link_clicks(count)')
+      .select('*, events(name, city, event_type), opportunities(title, cities), link_clicks(count)')
       .order('created_at', { ascending: false })
 
     const { data, error } = await query
@@ -377,8 +318,6 @@ export const linkTrackingApi = {
     const rows = city
       ? (data || []).filter((row: any) => {
           if (row.events?.city) return row.events.city === city
-          const scholarshipCities = row.scholarships?.cities || []
-          if (row.scholarships) return scholarshipCities.length === 0 || scholarshipCities.includes(city)
           const opportunityCities = row.opportunities?.cities || []
           if (row.opportunities) return opportunityCities.length === 0 || opportunityCities.includes(city)
           return false
@@ -388,18 +327,15 @@ export const linkTrackingApi = {
     return rows.map((row: any) => {
       const entityType: TrackedLinkWithStats['entity_type'] = row.event_id
         ? row.events?.event_type === 'HACKATHON' ? 'HACKATHON' : 'EVENT'
-        : row.scholarship_id
-          ? 'SCHOLARSHIP'
-          : 'OPPORTUNITY'
-      const entityId = row.event_id || row.scholarship_id || row.opportunity_id || row.id
+        : 'OPPORTUNITY'
+      const entityId = row.event_id || row.opportunity_id || row.id
       const entityName =
         row.events?.name ||
-        row.scholarships?.title ||
         row.opportunities?.title ||
         null
       const entityCity =
         row.events?.city ||
-        formatCityScope(row.scholarships?.cities || row.opportunities?.cities) ||
+        formatCityScope(row.opportunities?.cities) ||
         null
 
       return {
@@ -407,7 +343,6 @@ export const linkTrackingApi = {
         channel: row.channel,
         slug: row.slug,
         event_id: row.event_id,
-        scholarship_id: row.scholarship_id,
         opportunity_id: row.opportunity_id,
         entity_id: entityId,
         entity_type: entityType,

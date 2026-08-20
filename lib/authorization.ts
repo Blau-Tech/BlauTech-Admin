@@ -18,7 +18,6 @@ const BERLIN_LINKEDIN_WORKFLOW_PATH = 'blau-network-linkedin-draft-berlin'
 const ALLOWED_WORKFLOW_PATHS = [
   ...LINKEDIN_WORKFLOW_PATHS,
   'blau-network-newsletter',
-  'scholarships/intake',
 ] as const
 
 export function resolveWorkflowCity(
@@ -117,31 +116,6 @@ export function authorizeWorkflowRequest(
     typeof (payload as Record<string, unknown>).test_mode !== 'boolean'
   ) {
     return { allowed: false, status: 400, message: 'test_mode must be true or false.' }
-  }
-
-  if (path === 'scholarships/intake') {
-    if (!claims.isAdmin) {
-      return { allowed: false, status: 403, message: 'Only admins can preview scholarship extraction.' }
-    }
-
-    const body = payload as Record<string, unknown>
-
-    if (body.test_mode !== true) {
-      return { allowed: false, status: 400, message: 'Scholarship extraction is preview-only in Admin.' }
-    }
-
-    if (typeof body.url !== 'string') {
-      return { allowed: false, status: 400, message: 'A valid HTTPS scholarship URL is required.' }
-    }
-
-    try {
-      const url = new URL(body.url)
-      if (url.protocol !== 'https:' || url.username || url.password) throw new Error('invalid URL')
-    } catch {
-      return { allowed: false, status: 400, message: 'A valid HTTPS scholarship URL is required.' }
-    }
-
-    return { allowed: true }
   }
 
   if (path === 'blau-network-newsletter') {

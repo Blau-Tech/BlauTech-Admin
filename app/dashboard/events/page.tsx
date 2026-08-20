@@ -516,7 +516,7 @@ export default function EventsPage() {
             <Input
               id="link-url"
               type="url"
-              placeholder="Paste an event, hackathon, program, or scholarship URL..."
+              placeholder="Paste an event, hackathon, or program URL..."
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               disabled={linkSubmitting}

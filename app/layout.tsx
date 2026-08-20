@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'BlauTech Admin Panel',
-  description: 'Admin panel for managing BlauTech events, hackathons, and scholarships',
+  description: 'Admin panel for managing BlauTech events, hackathons, and opportunities',
 }
 
 export default function RootLayout({
@@ -24,4 +24,3 @@ export default function RootLayout({
     </html>
   )
 }
-

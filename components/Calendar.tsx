@@ -9,25 +9,23 @@ interface CalendarItem {
   title?: string // Fallback for backward compatibility
   start_date: string
   end_date?: string
-  type: 'event' | 'hackathon' | 'scholarship'
+  type: 'event' | 'hackathon'
 }
 
 interface CalendarProps {
   events: CalendarItem[]
   hackathons: CalendarItem[]
-  scholarships: CalendarItem[]
 }
 
-export default function Calendar({ events, hackathons, scholarships }: CalendarProps) {
+export default function Calendar({ events, hackathons }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
 
   const allItems = useMemo(() => {
     return [
       ...events.map(e => ({ ...e, type: 'event' as const })),
       ...hackathons.map(h => ({ ...h, type: 'hackathon' as const })),
-      ...scholarships.map(s => ({ ...s, type: 'scholarship' as const })),
     ]
-  }, [events, hackathons, scholarships])
+  }, [events, hackathons])
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -55,8 +53,6 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
         return 'bg-blue-500 text-white'
       case 'hackathon':
         return 'bg-green-500 text-white'
-      case 'scholarship':
-        return 'bg-purple-500 text-white'
       default:
         return 'bg-gray-500 text-white'
     }
@@ -68,8 +64,6 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
         return 'Event'
       case 'hackathon':
         return 'Hackathon'
-      case 'scholarship':
-        return 'Scholarship'
       default:
         return ''
     }
@@ -133,10 +127,6 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500"></div>
           <span className="text-sm text-gray-600">Hackathons</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-          <span className="text-sm text-gray-600">Scholarships</span>
         </div>
       </div>
 
@@ -230,4 +220,3 @@ export default function Calendar({ events, hackathons, scholarships }: CalendarP
     </div>
   )
 }
-

@@ -26,7 +26,7 @@ new Berlin-focused publishing system.
   flag; partner rows are ordered nearest-first within that priority group.
 - Events and hackathons have no Admin highlight control. Newsletter and LinkedIn
   selection do not read their legacy `is_highlight` values.
-- Highlight controls remain for scholarships, opportunities, and organisations,
+- Highlight controls remain for opportunities and organisations,
   where they select featured public-site content.
 
 ## Features
@@ -34,7 +34,6 @@ new Berlin-focused publishing system.
 - 🔐 **Protected Authentication**: Full admins and city-scoped city leads can access the panel
 - 📅 **Events Management**: Full CRUD operations for events
 - 💻 **Hackathons Management**: Full CRUD operations for hackathons
-- 🎓 **Scholarships Management**: Full CRUD operations for scholarships
 - 🏢 **Organisations Management**: Full CRUD operations for organisations
 - 🔗 **Link Tracking**: View tracked publishing links and click counts
 - ✍️ **Berlin Publishing**: Preview and create reviewed LinkedIn drafts
@@ -46,7 +45,6 @@ new Berlin-focused publishing system.
 - A Supabase project with the following tables:
   - `events`
   - `hackathons`
-  - `scholarships`
   - `opportunities`
   - `organisations`
   - `tracked_links`
@@ -103,7 +101,7 @@ new Berlin-focused publishing system.
 
 The application expects the following table structures:
 
-### Events, Hackathons, Scholarships
+### Events and Hackathons
 - `id` (uuid, primary key)
 - `title` (text, required)
 - `description` (text, optional)
@@ -120,7 +118,6 @@ The application expects the following table structures:
 │   ├── dashboard/          # Admin dashboard pages
 │   │   ├── events/         # Events management
 │   │   ├── hackathons/     # Hackathons management
-│   │   ├── scholarships/    # Scholarships management
 │   │   ├── opportunities/  # Programs and fellowships
 │   │   ├── organisations/  # Organisations management
 │   │   └── link-tracking/  # Publishing link analytics

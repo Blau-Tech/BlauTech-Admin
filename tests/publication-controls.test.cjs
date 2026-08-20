@@ -4,7 +4,7 @@ const path = require('node:path')
 const test = require('node:test')
 
 test('manual listings default to published while existing drafts stay unpublished', () => {
-  for (const name of ['Event', 'Hackathon', 'Opportunity', 'Scholarship']) {
+  for (const name of ['Event', 'Hackathon', 'Opportunity']) {
     const source = fs.readFileSync(path.join(__dirname, `../components/${name}Form.tsx`), 'utf8')
 
     assert.match(source, /is_published: initialData\.is_published \?\? true/)
@@ -42,7 +42,7 @@ test('event and hackathon publishing controls do not expose highlights', () => {
     assert.match(source, /partner_event/, `${name} partner control remains`)
   }
 
-  for (const name of ['Scholarship', 'Opportunity', 'Organisation']) {
+  for (const name of ['Opportunity', 'Organisation']) {
     const source = fs.readFileSync(path.join(__dirname, `../components/${name}Form.tsx`), 'utf8')
     assert.match(source, /is_highlight/, `${name} highlight control remains`)
   }

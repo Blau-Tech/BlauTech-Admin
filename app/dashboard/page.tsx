@@ -12,7 +12,6 @@ import {
   dashboardStats,
   eventsApi,
   hackathonsApi,
-  scholarshipsApi,
   triggerWorkflow,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -29,14 +28,6 @@ const CalendarIcon = () => (
 const CodeIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-  </svg>
-)
-
-const GraduationIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14v9M5 19.5l9-5M15 19.5l-9-5" />
   </svg>
 )
 
@@ -66,13 +57,11 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     events: 0,
     hackathons: 0,
-    scholarships: 0,
     opportunities: 0,
     organisations: 0,
   })
   const [calendarEvents, setCalendarEvents] = useState<any[]>([])
   const [calendarHackathons, setCalendarHackathons] = useState<any[]>([])
-  const [calendarScholarships, setCalendarScholarships] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [calendarLoading, setCalendarLoading] = useState(true)
   const [pendingWorkflow, setPendingWorkflow] = useState<'events-linkedin' | 'hackathons-linkedin' | 'newsletter' | null>(null)
@@ -89,14 +78,13 @@ export default function Dashboard() {
   const loadStats = async () => {
     try {
       setLoading(true)
-      const [events, hackathons, scholarships, opportunities, organisations] = await Promise.all([
+      const [events, hackathons, opportunities, organisations] = await Promise.all([
         dashboardStats.getEventsCount(cityFilter),
         dashboardStats.getHackathonsCount(cityFilter),
-        dashboardStats.getScholarshipsCount(cityFilter),
         dashboardStats.getOpportunitiesCount(cityFilter),
         dashboardStats.getOrganisationsCount(cityFilter),
       ])
-      setStats({ events, hackathons, scholarships, opportunities, organisations })
+      setStats({ events, hackathons, opportunities, organisations })
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
@@ -144,20 +132,13 @@ export default function Dashboard() {
   const loadCalendarData = async () => {
     try {
       setCalendarLoading(true)
-      const [events, hackathons, scholarships] = await Promise.all([
+      const [events, hackathons] = await Promise.all([
         eventsApi.fetch(cityFilter),
         hackathonsApi.fetch(cityFilter),
-        scholarshipsApi.fetch(cityFilter),
       ])
 
       setCalendarEvents(events.filter((e: any) => e.start_date))
       setCalendarHackathons(hackathons.filter((h: any) => h.start_date))
-      // Scholarships only have `deadline` in the new schema — show that on the calendar.
-      setCalendarScholarships(
-        scholarships
-          .filter((s: any) => s.deadline)
-          .map((s: any) => ({ ...s, start_date: s.deadline }))
-      )
     } catch (error) {
       console.error('Error loading calendar data:', error)
     } finally {
@@ -189,12 +170,6 @@ export default function Dashboard() {
       gradient: 'from-green-500 to-green-600',
     },
     {
-      name: 'Scholarships',
-      href: '/dashboard/scholarships',
-      icon: <GraduationIcon />,
-      gradient: 'from-purple-500 to-purple-600',
-    },
-    {
       name: 'Opportunities',
       href: '/dashboard/opportunities',
       icon: <SparklesIcon />,
@@ -214,8 +189,6 @@ export default function Dashboard() {
         return stats.events
       case 'Hackathons':
         return stats.hackathons
-      case 'Scholarships':
-        return stats.scholarships
       case 'Opportunities':
         return stats.opportunities
       case 'Organisations':
@@ -235,7 +208,7 @@ export default function Dashboard() {
           <p className="text-lg text-gray-600">
             {isCityLead && userCity
               ? `Showing data for your city: ${userCity.charAt(0) + userCity.slice(1).toLowerCase()}`
-              : 'Manage your events, hackathons, scholarships, opportunities and organisations'}
+              : 'Manage your events, hackathons, opportunities and organisations'}
           </p>
         </div>
 
@@ -329,7 +302,6 @@ export default function Dashboard() {
             <Calendar
               events={calendarEvents}
               hackathons={calendarHackathons}
-              scholarships={calendarScholarships}
             />
           )}
         </div>
