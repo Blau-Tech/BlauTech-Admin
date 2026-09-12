@@ -286,7 +286,7 @@ export default function Dashboard() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  Generate Newsletter Draft
+                  Prepare Resend Newsletter
                 </button>
               )}
           </div>
@@ -345,10 +345,10 @@ export default function Dashboard() {
 
       <ConfirmModal
         isOpen={pendingWorkflow === 'newsletter'}
-        title="Generate Newsletter Draft"
+        title="Prepare Resend Newsletter"
         checklist={[
           'Eligible published, unposted items are selected automatically by date.',
-          'Review the email draft before Beehiiv publishing, then mark included items Posted in Newsletter.',
+          'Live mode prepares this week’s Resend campaign; sending follows the server’s configured mode. Posted flags update after Resend confirms the campaign was sent.',
         ]}
         onConfirm={confirmWorkflow}
         onCancel={() => setPendingWorkflow(null)}

@@ -156,3 +156,12 @@ npm start
 ## License
 
 Private - BlauTech
+
+## Resend newsletter
+
+The admin-only **Prepare Resend Newsletter** action calls the existing protected
+workflow proxy. Test mode returns a write-free n8n preview. Live behavior follows
+the server's configured draft/send mode; a toast only acknowledges workflow start.
+Campaign completion updates Posted in Newsletter automatically. Do not mark drafts
+as posted. Provider/database setup is documented in the Platform repository at
+`docs/resend-newsletter.md`.
