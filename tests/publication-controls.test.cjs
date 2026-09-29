@@ -3,8 +3,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const test = require('node:test')
 
-test('manual listings default to published while existing drafts stay unpublished', () => {
-  for (const name of ['Event', 'Hackathon', 'Opportunity']) {
+test('manual events keep their existing publication controls', () => {
+  for (const name of ['Event', 'Hackathon']) {
     const source = fs.readFileSync(path.join(__dirname, `../components/${name}Form.tsx`), 'utf8')
 
     assert.match(source, /is_published: initialData\.is_published \?\? true/)
@@ -13,13 +13,24 @@ test('manual listings default to published while existing drafts stay unpublishe
   }
 })
 
-test('new fellowships and programs use one Program category', () => {
+test('individual programs are drafts with explicit category and approval actions', () => {
   const form = fs.readFileSync(path.join(__dirname, '../components/OpportunityForm.tsx'), 'utf8')
   const page = fs.readFileSync(path.join(__dirname, '../app/dashboard/opportunities/page.tsx'), 'utf8')
 
   assert.match(form, /opportunity_type: 'PROGRAM'/)
-  assert.doesNotMatch(form, /option value="FELLOWSHIP"/)
-  assert.match(page, /FELLOWSHIP: 'Program'/)
+  assert.match(form, /option value="FELLOWSHIP"/)
+  assert.match(form, /option value="RESIDENCY"/)
+  assert.match(form, /is_published: false/)
+  assert.doesNotMatch(form, /register\('is_published'\)|is_published: true/)
+  assert.match(form, /Approve reviewed version/)
+  assert.match(form, /href=\{officialUrl\}/)
+  assert.match(form, /useEffect\(\(\) => \{ setPageChecked\(false\) \}, \[officialUrl\]\)/)
+  for (const field of ['format', 'location', 'location_scope', 'image_url']) {
+    assert.ok(form.includes(`register('${field}')`), `${field} can be reviewed before publication`)
+  }
+  assert.match(page, /opp\.application_status === 'CLOSED' \? <Badge[^>]*>Closed/)
+  assert.match(page, /programReviewsApi\.decide/)
+  assert.match(page, /programReviewsApi\.submit/)
 })
 
 test('event and hackathon publishing controls do not expose highlights', () => {

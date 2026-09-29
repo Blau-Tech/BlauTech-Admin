@@ -7,6 +7,7 @@ import OpportunityForm from '@/components/OpportunityForm'
 import GlassCard from '@/components/ui/GlassCard'
 import Badge from '@/components/ui/Badge'
 import { opportunitiesApi } from '@/lib/api'
+import { programReviewsApi, type ProgramReview, type ReviewDecision } from '@/lib/programReviews'
 import { useAuth } from '@/lib/auth'
 import { format } from 'date-fns'
 
@@ -26,6 +27,8 @@ type Opportunity = {
   posted_newsletter: boolean
   is_highlight: boolean
   is_published: boolean
+  program_subtype?: string | null
+  application_status?: string
   created_at: string
 }
 
@@ -40,7 +43,7 @@ const TYPE_FILTERS: { value: OpportunityType | 'ALL'; label: string }[] = [
 ]
 
 export default function OpportunitiesPage() {
-  const { isCityLead, userCity, loading: authLoading } = useAuth()
+  const { isAdmin, isCityLead, userCity, loading: authLoading } = useAuth()
   const cityFilter = isCityLead ? userCity ?? undefined : undefined
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,17 +54,22 @@ export default function OpportunitiesPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null)
+  const [editingReview, setEditingReview] = useState<ProgramReview | null>(null)
+  const [reviews, setReviews] = useState<ProgramReview[]>([])
+  const [reviewStatus, setReviewStatus] = useState<ProgramReview['status']>('PENDING')
 
   useEffect(() => {
     if (authLoading) return
     loadOpportunities()
-  }, [authLoading, cityFilter])
+  }, [authLoading, cityFilter, isAdmin, reviewStatus])
 
   const loadOpportunities = async () => {
     try {
       setLoading(true)
+      setError('')
       const data = await opportunitiesApi.fetch(cityFilter)
       setOpportunities(data as Opportunity[])
+      setReviews(isAdmin ? await programReviewsApi.fetch(reviewStatus) : [])
     } catch (err: any) {
       setError(err.message || 'Failed to load opportunities')
     } finally {
@@ -91,45 +99,33 @@ export default function OpportunitiesPage() {
 
   const handleAdd = () => {
     setEditingOpp(null)
+    setEditingReview(null)
     setIsModalOpen(true)
   }
 
   const handleEdit = (opp: Opportunity) => {
     setEditingOpp(opp)
+    setEditingReview(null)
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (opp: Opportunity) => {
-    if (!confirm(`Are you sure you want to delete "${opp.title}"?`)) return
-    try {
-      setError('')
-      await opportunitiesApi.delete(opp.id)
-      await loadOpportunities()
-      setSuccessMessage('Opportunity deleted successfully!')
-      setTimeout(() => setSuccessMessage(''), 2000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete opportunity')
-    }
-  }
-
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: any, decision: ReviewDecision = { action: 'SAVE' }) => {
     setError('')
     setSuccessMessage('')
 
-    if (editingOpp) {
-      await opportunitiesApi.update(editingOpp.id, data)
-      setSuccessMessage('Opportunity updated successfully!')
+    if (editingReview) {
+      await programReviewsApi.decide(editingReview, data, decision)
+      setSuccessMessage(decision.action === 'APPROVE' ? 'Reviewed version approved.' : decision.action === 'REJECT' ? 'Proposal rejected.' : 'Draft saved.')
     } else {
-      await opportunitiesApi.create(data)
-      setSuccessMessage('Opportunity created successfully!')
+      const result = await programReviewsApi.submit(data, editingOpp?.id || null)
+      setSuccessMessage(result?.status === 'REJECTED'
+        ? 'This application round was already rejected. See the rejected reviews.'
+        : result?.status === 'DUPLICATE' ? 'This proposal is already recorded.' : 'Draft saved for admin review.')
     }
-
-    setTimeout(() => {
-      setIsModalOpen(false)
-      setEditingOpp(null)
-      setSuccessMessage('')
-      loadOpportunities()
-    }, 800)
+    setIsModalOpen(false)
+    setEditingOpp(null)
+    setEditingReview(null)
+    await loadOpportunities()
   }
 
   if (loading) {
@@ -182,15 +178,49 @@ export default function OpportunitiesPage() {
             )}
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center gap-3">
-            <button
+            {isAdmin && <button
               type="button"
               onClick={handleAdd}
               className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
             >
-              Add Opportunity
-            </button>
+              Add program draft
+            </button>}
           </div>
         </div>
+
+        {isAdmin && (
+          <section aria-labelledby="program-reviews-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
+            <h2 id="program-reviews-heading" className="text-lg font-semibold text-gray-900">Program reviews</h2>
+            <p className="mt-1 text-sm text-gray-600">Fellowships and residencies for individuals. New listings and changes stay private until approved.</p>
+            <div className="my-4 flex flex-wrap gap-2" aria-label="Review status">
+              {(['PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
+                <button key={status} type="button" aria-pressed={reviewStatus === status} onClick={() => setReviewStatus(status)}
+                  className={`rounded-lg border px-3 py-2 text-sm ${reviewStatus === status ? 'bg-primary-100 border-primary-400' : 'border-gray-300'}`}>
+                  {status === 'PENDING' ? 'Pending' : status === 'APPROVED' ? 'Approved' : 'Rejected'}
+                </button>
+              ))}
+              <button type="button" onClick={loadOpportunities} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">Refresh reviews</button>
+            </div>
+            {!reviews.length && <p className="text-sm text-gray-500">No {reviewStatus.toLowerCase()} reviews.</p>}
+            <ul className="divide-y divide-gray-200">
+              {reviews.map(review => (
+                <li key={review.id} className="flex flex-wrap items-start justify-between gap-3 py-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium">{review.proposed_listing.title || 'Untitled program'}</h3>
+                    <p className="text-sm text-gray-600">{review.proposed_listing.organisation} · {review.proposed_listing.program_subtype || 'Category needs review'}</p>
+                    <p className="text-sm text-gray-500">{review.opportunity_id ? 'Proposed update' : 'New listing'} · Applications: {review.proposed_listing.application_status || 'UNKNOWN'}</p>
+                    {review.proposed_listing.deadline && <p className="text-sm text-gray-500">Deadline: {review.proposed_listing.deadline}</p>}
+                    {review.rejection_reason && <p className="mt-1 text-sm text-red-700">Reason: {review.rejection_reason}</p>}
+                    {review.reviewed_at && <p className="text-xs text-gray-500">Reviewed {new Date(review.reviewed_at).toLocaleString()}{review.reviewed_by ? ` · Admin ${review.reviewed_by}` : ''}</p>}
+                    {review.source_url.startsWith('https://') && <a href={review.source_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-700 underline">Official source</a>}
+                  </div>
+                  {review.status === 'PENDING' && <button type="button" className="rounded-lg border border-primary-300 px-4 py-2 text-sm text-primary-700"
+                    onClick={() => { setEditingOpp(null); setEditingReview(review); setIsModalOpen(true) }}>Review proposal</button>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="mb-4 flex flex-wrap gap-2">
           {TYPE_FILTERS.map((tf) => (
@@ -244,8 +274,8 @@ export default function OpportunitiesPage() {
                         <p className="text-sm text-gray-500 mb-2">by {opp.organisation}</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge color="pink" size="sm">{TYPE_LABELS[opp.opportunity_type]}</Badge>
-                        {opp.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
+                        <Badge color="pink" size="sm">{opp.program_subtype === 'FELLOWSHIP' ? 'Fellowship' : opp.program_subtype === 'RESIDENCY' ? 'Residency' : TYPE_LABELS[opp.opportunity_type]}</Badge>
+                        {opp.application_status === 'CLOSED' ? <Badge color="gray" size="sm">Closed</Badge> : opp.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {Array.isArray(opp.cities) && opp.cities.map((c) => (
                           <Badge key={c} color="gray" size="sm">{c}</Badge>
                         ))}
@@ -293,20 +323,14 @@ export default function OpportunitiesPage() {
                     </div>
                   )}
 
-                  <div className="flex justify-end space-x-4 pt-2 border-t border-white/40">
+                  {isAdmin && <div className="flex justify-end space-x-4 pt-2 border-t border-white/40">
                     <button
                       onClick={() => handleEdit(opp)}
                       className="text-primary-600 hover:text-primary-800 text-sm font-medium"
                     >
-                      {opp.is_published === false ? 'Review & approve' : 'Edit'}
+                      Propose changes
                     </button>
-                    <button
-                      onClick={() => handleDelete(opp)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  </div>}
                 </div>
               </GlassCard>
             ))}
@@ -319,16 +343,19 @@ export default function OpportunitiesPage() {
         onClose={() => {
           setIsModalOpen(false)
           setEditingOpp(null)
+          setEditingReview(null)
           setError('')
         }}
-        title={editingOpp ? 'Edit Opportunity' : 'Add Opportunity'}
+        title={editingReview ? 'Review program' : editingOpp ? 'Propose program changes' : 'Add program draft'}
       >
         <OpportunityForm
-          initialData={editingOpp}
+          initialData={editingReview?.proposed_listing || editingOpp}
+          review={editingReview}
           onSubmit={handleSubmit}
           onCancel={() => {
             setIsModalOpen(false)
             setEditingOpp(null)
+            setEditingReview(null)
             setError('')
           }}
           title={editingOpp ? 'Edit Opportunity' : 'Add Opportunity'}
