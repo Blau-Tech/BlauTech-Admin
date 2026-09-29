@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { programReviewsApi } from './programReviews'
 
 // Tables where city is a single text column (vs. an array)
 const SINGLE_CITY_TABLES = new Set(['events', 'organisations'])
@@ -198,9 +199,8 @@ export const organisationsApi = {
 // Opportunities (new) ---------------------------------------------------------
 export const opportunitiesApi = {
   fetch: (cityFilter?: string) => fetchTable('opportunities', cityFilter),
-  create: (opp: any) => createRecord('opportunities', { is_published: true, ...opp }),
-  update: (id: string, updates: any) => updateRecord('opportunities', id, updates),
-  delete: (id: string) => deleteRecord('opportunities', id),
+  create: (opp: any) => programReviewsApi.submit(opp),
+  update: (id: string, updates: any) => programReviewsApi.submit(updates, id),
 }
 
 // Dashboard counts ------------------------------------------------------------
