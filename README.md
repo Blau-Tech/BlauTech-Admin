@@ -88,6 +88,15 @@ new Berlin-focused publishing system.
 
    After changing claims, the user must sign out and sign back in so their access token contains the new App Metadata.
 
+   For password setup, deploy `/set-password` and add the exact production URL
+   `https://admin.blau-tech.de/set-password` to Supabase Auth's redirect allowlist.
+   Enable email/password login but keep public signup disabled. Assign the reviewed
+   account's role through protected App Metadata, then send its invite or recovery
+   email with that redirect URL. Invite `data` is user-editable metadata, not a role.
+   The recipient chooses a password of at least 12 characters, signs out, and
+   verifies a fresh login. Do not remove old admin accounts until that
+   fresh login succeeds; never share passwords or setup tokens in chat or logs.
+
 4. **Run the development server:**
    ```bash
    npm run dev
