@@ -191,7 +191,7 @@ export default function OpportunitiesPage() {
         {isAdmin && (
           <section aria-labelledby="program-reviews-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
             <h2 id="program-reviews-heading" className="text-lg font-semibold text-gray-900">Program reviews</h2>
-            <p className="mt-1 text-sm text-gray-600">Fellowships and residencies for individuals. New listings and changes stay private until approved.</p>
+            <p className="mt-1 text-sm text-gray-600">Fellowships, residencies and selective communities for ambitious builders. No existing company required. New listings and changes stay private until approved.</p>
             <div className="my-4 flex flex-wrap gap-2" aria-label="Review status">
               {(['PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
                 <button key={status} type="button" aria-pressed={reviewStatus === status} onClick={() => setReviewStatus(status)}
@@ -274,7 +274,7 @@ export default function OpportunitiesPage() {
                         <p className="text-sm text-gray-500 mb-2">by {opp.organisation}</p>
                       )}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge color="pink" size="sm">{opp.program_subtype === 'FELLOWSHIP' ? 'Fellowship' : opp.program_subtype === 'RESIDENCY' ? 'Residency' : TYPE_LABELS[opp.opportunity_type]}</Badge>
+                        <Badge color="pink" size="sm">{opp.program_subtype === 'FELLOWSHIP' ? 'Fellowship' : opp.program_subtype === 'RESIDENCY' ? 'Residency' : opp.program_subtype === 'COMMUNITY' ? 'Builder community' : TYPE_LABELS[opp.opportunity_type]}</Badge>
                         {opp.application_status === 'CLOSED' ? <Badge color="gray" size="sm">Closed</Badge> : opp.is_published === false && <Badge color="amber" size="sm">Needs approval</Badge>}
                         {Array.isArray(opp.cities) && opp.cities.map((c) => (
                           <Badge key={c} color="gray" size="sm">{c}</Badge>
