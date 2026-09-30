@@ -36,7 +36,7 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
     reset({
       ...data,
       url: data.clean_url || data.url || '',
-      program_subtype: ['FELLOWSHIP', 'RESIDENCY'].includes(data.program_subtype) ? data.program_subtype : '',
+      program_subtype: ['FELLOWSHIP', 'RESIDENCY', 'COMMUNITY'].includes(data.program_subtype) ? data.program_subtype : '',
       application_status: data.application_status || 'UNKNOWN',
       individual_eligible: data.individual_eligible === true,
       no_company_required: data.no_company_required === true,
@@ -153,11 +153,12 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
             <option value="">Unclear — needs review</option>
             <option value="FELLOWSHIP">Fellowship</option>
             <option value="RESIDENCY">Residency</option>
+            <option value="COMMUNITY">Builder community</option>
           </select>
         </label>
         <MultiSelect label="BlauTech audience cities (empty means all cities)" options={CITY_OPTIONS} selected={cities} onChange={setCities} />
-        <TextareaField id="eligibility_notes" label="Who can apply, including country restrictions" {...register('eligibility_notes')} />
-        <TextareaField id="benefits" label="Funding, access, learning, or other support" {...register('benefits')} />
+        <TextareaField id="eligibility_notes" label="Who can apply, including age, country and team restrictions" {...register('eligibility_notes')} />
+        <TextareaField id="benefits" label="Support and costs, including funding, fees or equity terms" {...register('benefits')} />
         <TextareaField id="evidence" label="Official evidence for eligibility and application status" {...register('evidence')} />
         <TextField id="location" label="Venue or location" {...register('location')} />
         <label className="block text-sm font-medium text-gray-700">
@@ -199,11 +200,12 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
       </FormSection>
 
       <FormSection title="Eligibility checks">
+        <p className="text-sm text-gray-600">For people building projects, exploring technical ideas or becoming founders. An existing company is not required. Selective communities can have rolling admissions without fixed program dates.</p>
         <CheckboxField id="individual_eligible" label="The official page confirms that individuals can apply" {...register('individual_eligible')} />
         <CheckboxField id="no_company_required" label="Applicants do not need an existing company or startup" {...register('no_company_required')} />
         <CheckboxField id="selective_program" label="Participants are selected through an application process" {...register('selective_program')} />
-        <CheckboxField id="scope_confirmed" label="The subject and geographic eligibility fit BlauTech’s agreed scope" {...register('scope_confirmed')} />
-        <CheckboxField id="excluded_program" label="This is an excluded type (startup program, job, course, mentoring-only, or exchange)" {...register('excluded_program')} />
+        <CheckboxField id="scope_confirmed" label="This supports ambitious builders and its applicant geography fits BlauTech’s audience" {...register('scope_confirmed')} />
+        <CheckboxField id="excluded_program" label="Excluded: company-required program, job, course, mentoring-only, exchange, or open networking membership" {...register('excluded_program')} />
         <CheckboxField id="is_highlight" label="Highlight after approval" {...register('is_highlight')} />
       </FormSection>
 

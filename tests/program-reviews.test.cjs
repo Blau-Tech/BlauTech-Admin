@@ -39,6 +39,24 @@ test('approval sends the displayed version and requires explicit recheck and sha
   assert.equal(calls[1][1].p_new_application_round, true)
 })
 
+test('a rolling builder community keeps its subtype and unknown dates in the private queue', async () => {
+  const api = apiWith({ rpc: async (name, args) => {
+    assert.equal(name, 'submit_program_review')
+    assert.equal(args.p_listing.program_subtype, 'COMMUNITY')
+    assert.equal(args.p_listing.application_status, 'ROLLING')
+    assert.equal(args.p_listing.deadline, null)
+    assert.equal(args.p_listing.program_start_date, null)
+    assert.equal(args.p_listing.no_company_required, true)
+    return { data: [{ status: 'PENDING_REVIEW', review_id: 'community-review' }] }
+  } })
+  const result = await api.submit({
+    title: 'Selective builder community', url: 'https://example.org/community',
+    program_subtype: 'COMMUNITY', application_status: 'ROLLING',
+    deadline: null, program_start_date: null, no_company_required: true,
+  })
+  assert.equal(result.status, 'PENDING_REVIEW')
+})
+
 test('rejection records the reason without applying any proposed content', async () => {
   const api = apiWith({ rpc: async (name, args) => {
     assert.equal(args.p_decision, 'REJECT')
