@@ -20,6 +20,15 @@ test('individual programs are drafts with explicit category and approval actions
   assert.match(form, /opportunity_type: 'PROGRAM'/)
   assert.match(form, /option value="FELLOWSHIP"/)
   assert.match(form, /option value="RESIDENCY"/)
+  assert.match(form, /option value="COMMUNITY">Builder community/)
+  for (const category of ['FELLOWSHIP', 'STUDENT_PROGRAM', 'CAREER_DEVELOPMENT', 'RESIDENCY', 'ACCELERATOR', 'INCUBATOR', 'FOUNDER_PROGRAM', 'STARTUP_FUNDING', 'COMMUNITY']) {
+    assert.ok(form.includes(`option value="${category}"`), category)
+  }
+  assert.match(form, /opportunity and its applicant geography/)
+  assert.match(form, /typeof data.no_company_required === 'boolean'/)
+  assert.match(form, /data.no_company_required === 'false' \? false : null/)
+  assert.doesNotMatch(form, /excluded type \(startup program/)
+  assert.match(page, /'COMMUNITY' \? 'Builder community'/)
   assert.match(form, /is_published: false/)
   assert.doesNotMatch(form, /register\('is_published'\)|is_published: true/)
   assert.match(form, /Approve reviewed version/)

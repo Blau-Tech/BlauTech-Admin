@@ -36,13 +36,13 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
     reset({
       ...data,
       url: data.clean_url || data.url || '',
-      program_subtype: ['FELLOWSHIP', 'RESIDENCY'].includes(data.program_subtype) ? data.program_subtype : '',
+      program_subtype: ['FELLOWSHIP', 'STUDENT_PROGRAM', 'CAREER_DEVELOPMENT', 'RESIDENCY', 'ACCELERATOR', 'INCUBATOR', 'FOUNDER_PROGRAM', 'STARTUP_FUNDING', 'COMMUNITY'].includes(data.program_subtype) ? data.program_subtype : '',
       application_status: data.application_status || 'UNKNOWN',
-      individual_eligible: data.individual_eligible === true,
-      no_company_required: data.no_company_required === true,
-      selective_program: data.selective_program === true,
+      individual_eligible: typeof data.individual_eligible === 'boolean' ? String(data.individual_eligible) : '',
+      no_company_required: typeof data.no_company_required === 'boolean' ? String(data.no_company_required) : '',
+      selective_program: typeof data.selective_program === 'boolean' ? String(data.selective_program) : '',
       scope_confirmed: data.scope_confirmed === true,
-      excluded_program: data.excluded_program === true,
+      excluded_program: typeof data.excluded_program === 'boolean' ? String(data.excluded_program) : '',
       is_highlight: data.is_highlight === true,
     })
     setCities(data.audience_cities || data.cities || [])
@@ -80,6 +80,10 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
           audience_scope: cities.length ? 'CITY' : 'GLOBAL',
           audience_cities: cities,
           program_subtype: data.program_subtype || null,
+          individual_eligible: data.individual_eligible === 'true' ? true : data.individual_eligible === 'false' ? false : null,
+          no_company_required: data.no_company_required === 'true' ? true : data.no_company_required === 'false' ? false : null,
+          selective_program: data.selective_program === 'true' ? true : data.selective_program === 'false' ? false : null,
+          excluded_program: data.excluded_program === 'true' ? true : data.excluded_program === 'false' ? false : null,
           deadline: data.deadline || null,
           application_open_date: data.application_open_date || null,
           program_start_date: data.program_start_date || null,
@@ -153,11 +157,18 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
             <option value="">Unclear — needs review</option>
             <option value="FELLOWSHIP">Fellowship</option>
             <option value="RESIDENCY">Residency</option>
+            <option value="COMMUNITY">Builder community</option>
+            <option value="STUDENT_PROGRAM">Student program</option>
+            <option value="CAREER_DEVELOPMENT">Career development</option>
+            <option value="ACCELERATOR">Accelerator</option>
+            <option value="INCUBATOR">Incubator</option>
+            <option value="FOUNDER_PROGRAM">Founder program</option>
+            <option value="STARTUP_FUNDING">Startup funding</option>
           </select>
         </label>
         <MultiSelect label="BlauTech audience cities (empty means all cities)" options={CITY_OPTIONS} selected={cities} onChange={setCities} />
-        <TextareaField id="eligibility_notes" label="Who can apply, including country restrictions" {...register('eligibility_notes')} />
-        <TextareaField id="benefits" label="Funding, access, learning, or other support" {...register('benefits')} />
+        <TextareaField id="eligibility_notes" label="Who can apply, including age, country and team restrictions" {...register('eligibility_notes')} />
+        <TextareaField id="benefits" label="Support and costs, including funding, fees or equity terms" {...register('benefits')} />
         <TextareaField id="evidence" label="Official evidence for eligibility and application status" {...register('evidence')} />
         <TextField id="location" label="Venue or location" {...register('location')} />
         <label className="block text-sm font-medium text-gray-700">
@@ -199,11 +210,40 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
       </FormSection>
 
       <FormSection title="Eligibility checks">
-        <CheckboxField id="individual_eligible" label="The official page confirms that individuals can apply" {...register('individual_eligible')} />
-        <CheckboxField id="no_company_required" label="Applicants do not need an existing company or startup" {...register('no_company_required')} />
-        <CheckboxField id="selective_program" label="Participants are selected through an application process" {...register('selective_program')} />
-        <CheckboxField id="scope_confirmed" label="The subject and geographic eligibility fit BlauTech’s agreed scope" {...register('scope_confirmed')} />
-        <CheckboxField id="excluded_program" label="This is an excluded type (startup program, job, course, mentoring-only, or exchange)" {...register('excluded_program')} />
+        <p className="text-sm text-gray-600">Individual categories require eligibility without an existing company. Startup categories may require a team or company: record the exact requirements above. Student and career programs need a structured tech offer; other categories require selective admission or funding allocation.</p>
+        <label className="block text-sm font-medium text-gray-700">
+          Can individuals apply?
+          <select {...register('individual_eligible')} className={inputClass}>
+            <option value="">Unknown — needs review</option>
+            <option value="true">Yes — confirmed on the official page</option>
+            <option value="false">No</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium text-gray-700">
+          Existing company requirement
+          <select {...register('no_company_required')} className={inputClass}>
+            <option value="">Unknown — needs review</option>
+            <option value="true">No existing company required</option>
+            <option value="false">Existing company required</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium text-gray-700">
+          Are participants selected through an application process?
+          <select {...register('selective_program')} className={inputClass}>
+            <option value="">Unknown — needs review</option>
+            <option value="true">Yes — confirmed on the official page</option>
+            <option value="false">No</option>
+          </select>
+        </label>
+        <CheckboxField id="scope_confirmed" label="This is a relevant tech or founder opportunity and its applicant geography fits BlauTech’s audience" {...register('scope_confirmed')} />
+        <label className="block text-sm font-medium text-gray-700">
+          Excluded: scholarship, job/internship, medical training, unrelated program, generic course catalogue or open networking membership
+          <select {...register('excluded_program')} className={inputClass}>
+            <option value="">Unknown — needs review</option>
+            <option value="false">No — this is an eligible program type</option>
+            <option value="true">Yes — exclude this program</option>
+          </select>
+        </label>
         <CheckboxField id="is_highlight" label="Highlight after approval" {...register('is_highlight')} />
       </FormSection>
 
