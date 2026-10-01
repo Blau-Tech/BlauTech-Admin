@@ -28,9 +28,11 @@ new Berlin-focused publishing system.
   selection do not read their legacy `is_highlight` values.
 - Highlight controls remain for opportunities and organisations,
   where they select featured public-site content.
-- **Opportunities → Program reviews** accepts fellowships, residencies and
-  selective builder communities (`COMMUNITY`). Aspiring founders are welcome;
-  an existing company must not be required. Full admins confirm builder focus,
+- **Opportunities → Program reviews** accepts all eight website program categories
+  and selective builder communities (`COMMUNITY`). Individual categories need
+  eligibility without an existing company; startup categories may require one.
+  Unknown eligibility, selection and exclusion facts remain unknown when saving
+  an automated draft. Full admins confirm builder focus,
   applicant geography, selection, costs and official application status before
   approval. Rolling communities do not need invented cohort dates. Saving is
   private; events and hackathons retain their existing publication controls.

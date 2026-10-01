@@ -74,3 +74,37 @@ test('stale version and permission failures propagate for review instead of retr
   await assert.rejects(api.decide({ id: 'r1', version: 2 }, {}, { action: 'APPROVE' }), error)
   assert.equal(calls, 1)
 })
+
+test('opening and saving a reader draft preserves unknown, yes and no eligibility facts', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../components/OpportunityForm.tsx'), 'utf8')
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText
+  for (const value of [null, true, false]) {
+    let values, saved
+    const mod = { exports: {} }
+    const dependencies = {
+      'react/jsx-runtime': require('react/jsx-runtime'),
+      react: { useState: initial => [initial, () => {}], useEffect: effect => effect() },
+      './ui/FormSection': { default: () => null },
+      './ui/ErrorBanner': { default: () => null },
+      './ui/MultiSelect': { default: () => null },
+      './ui/FormField': { TextField: () => null, TextareaField: () => null, CheckboxField: () => null },
+      'react-hook-form': { useForm: () => ({
+        register: name => ({ name }), reset: data => { values = data }, watch: () => '',
+        handleSubmit: callback => () => callback(values),
+      }) },
+    }
+    new Function('module', 'exports', 'require', 'HTMLButtonElement', compiled)(mod, mod.exports,
+      name => { assert.ok(name in dependencies, `Unexpected dependency: ${name}`); return dependencies[name] }, class {})
+    const initialData = { url: 'https://example.org/program', title: 'Reader draft', organisation: 'Provider',
+      individual_eligible: value, no_company_required: value, selective_program: value, excluded_program: value }
+    const form = mod.exports.default({ initialData, review: { id: 'reader-review', version: 1, verified_at: null }, onSubmit: async listing => { saved = listing }, onCancel: () => {} })
+    await form.props.onSubmit()
+    assert.ok(saved, 'Draft was submitted')
+    for (const field of ['individual_eligible', 'no_company_required', 'selective_program', 'excluded_program']) {
+      assert.equal(saved[field], value, `${field} preserves ${value}`)
+    }
+    assert.equal(saved.is_published, false)
+  }
+})
