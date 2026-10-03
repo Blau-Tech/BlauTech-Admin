@@ -1,5 +1,7 @@
 'use client'
 
+import ProgramBacklogStatus from '@/components/ProgramBacklogStatus'
+
 import { useEffect, useMemo, useState } from 'react'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
@@ -187,6 +189,8 @@ export default function OpportunitiesPage() {
             </button>}
           </div>
         </div>
+
+        {isAdmin && <ProgramBacklogStatus />}
 
         {isAdmin && (
           <section aria-labelledby="program-reviews-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
