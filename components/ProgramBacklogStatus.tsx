@@ -17,6 +17,7 @@ export default function ProgramBacklogStatus() {
   const [sources, setSources] = useState<Record<string, Record<string, number>> | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [capacity, setCapacity] = useState<{ oldest: string | null; completed: number } | null>(null)
 
   async function refresh() {
     setLoading(true)
@@ -36,11 +37,26 @@ export default function ProgramBacklogStatus() {
         grouped[row.source_url] ||= Object.create(null)
         grouped[row.source_url][row.status] = Number(row.candidates)
       }
+      const since = new Date(Date.now() - 7 * 86400000).toISOString()
+      const [oldest, completed] = await Promise.all([
+        supabase.from('program_discoveries').select('available_at')
+          .eq('discovery_kind', 'DIRECTORY').eq('status', 'QUEUED')
+          .order('available_at', { ascending: true }).limit(1),
+        supabase.from('program_discoveries').select('id', { count: 'exact', head: true })
+          .eq('discovery_kind', 'DIRECTORY').gte('completed_at', since),
+      ])
+      if (oldest.error || completed.error) throw new Error(oldest.error?.message || completed.error?.message)
+      if (!Array.isArray(oldest.data) || oldest.data.length > 1
+        || (oldest.data.length === 1 && (typeof oldest.data[0].available_at !== 'string' || !Number.isFinite(Date.parse(oldest.data[0].available_at))))
+        || completed.count === null || !Number.isSafeInteger(completed.count) || completed.count < 0) throw new Error('Queue capacity unavailable')
+      if (results[0].count! > 0 && oldest.data.length === 0) throw new Error('Queue changed while loading; refresh to try again')
+      setCapacity({ oldest: oldest.data[0]?.available_at || null, completed: completed.count })
       setSources(grouped)
       setCounts(results.map(result => result.count!))
     } catch (err) {
       setCounts(null)
       setSources(null)
+      setCapacity(null)
       setError(err instanceof Error ? err.message : 'Unable to load queue status')
     } finally {
       setLoading(false)
@@ -64,6 +80,18 @@ export default function ProgramBacklogStatus() {
         <dd className="text-xl font-semibold text-gray-900">{counts[index]}</dd>
       </div>)}
     </dl>}
+    {capacity && counts && <div className="mt-5 rounded-lg bg-gray-50 p-4">
+      <h3 className="font-medium text-gray-900">Processing capacity</h3>
+      <dl className="mt-3 grid gap-4 sm:grid-cols-3">
+        <div><dt className="text-sm text-gray-600">Scheduled read limit</dt><dd className="font-semibold">6 links per day</dd></div>
+        <div><dt className="text-sm text-gray-600">Oldest waiting link</dt><dd className="font-semibold">{capacity.oldest
+          ? `${Math.max(0, Math.floor((Date.now() - Date.parse(capacity.oldest)) / 3600000))} hours`
+          : 'No waiting links'}</dd>{capacity.oldest && <time dateTime={capacity.oldest} className="text-xs text-gray-500">Queued since {new Date(capacity.oldest).toLocaleString()}</time>}</div>
+        <div><dt className="text-sm text-gray-600">Completed links in the last 7 days</dt><dd className="font-semibold">{capacity.completed}</dd></div>
+      </dl>
+      {counts[0] > 0 && <p className="mt-3 text-sm text-gray-700">The waiting queue alone needs at least {Math.ceil(counts[0] / 6)} scheduled processing days at this limit. Retries and new links can increase the wait.</p>}
+      <p className="mt-2 text-xs text-gray-500">The limit is three reads per run at 10:15 and 18:15 Europe/Berlin. Manual runs can add reads. Completed links count current review handoffs or terminal outcomes dated within seven days; retry attempts are not included. This is not a completion forecast.</p>
+    </div>}
     {sources && <div className="mt-5 overflow-x-auto">
       <table className="w-full text-left text-sm">
         <caption className="mb-2 text-left font-medium">By primary discovery source</caption>
