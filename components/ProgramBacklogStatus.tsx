@@ -14,6 +14,7 @@ const states = [
 
 export default function ProgramBacklogStatus() {
   const [counts, setCounts] = useState<number[] | null>(null)
+  const [sources, setSources] = useState<Record<string, Record<string, number>> | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -26,9 +27,20 @@ export default function ProgramBacklogStatus() {
         .eq('discovery_kind', 'DIRECTORY').eq('status', status)))
       const failed = results.find(result => result.error || result.count === null)
       if (failed) throw new Error(failed.error?.message || 'Queue counts unavailable')
+      const sourceResult = await supabase.rpc('program_directory_source_counts')
+      if (sourceResult.error) throw new Error(sourceResult.error.message)
+      if (!Array.isArray(sourceResult.data)) throw new Error('Source counts unavailable')
+      const grouped: Record<string, Record<string, number>> = Object.create(null)
+      for (const row of sourceResult.data) {
+        if (typeof row.source_url !== 'string' || typeof row.status !== 'string' || !Number.isSafeInteger(Number(row.candidates)) || Number(row.candidates) < 0) throw new Error('Invalid source count')
+        grouped[row.source_url] ||= Object.create(null)
+        grouped[row.source_url][row.status] = Number(row.candidates)
+      }
+      setSources(grouped)
       setCounts(results.map(result => result.count!))
     } catch (err) {
       setCounts(null)
+      setSources(null)
       setError(err instanceof Error ? err.message : 'Unable to load queue status')
     } finally {
       setLoading(false)
@@ -52,6 +64,17 @@ export default function ProgramBacklogStatus() {
         <dd className="text-xl font-semibold text-gray-900">{counts[index]}</dd>
       </div>)}
     </dl>}
-    <p className="mt-3 text-xs text-gray-500">A link sent to review may update an existing draft. It does not necessarily create a new program.</p>
+    {sources && <div className="mt-5 overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <caption className="mb-2 text-left font-medium">By primary discovery source</caption>
+        <thead><tr><th className="p-2">Source</th><th className="p-2">Waiting</th><th className="p-2">Retry</th><th className="p-2">Sent to review</th><th className="p-2">Stopped</th></tr></thead>
+        <tbody>{Object.entries(sources).map(([url, totals]) => <tr key={url} className="border-t border-gray-200">
+          <th className="p-2 break-all font-normal">{url}</th>
+          <td className="p-2">{totals.QUEUED || 0}</td><td className="p-2">{totals.RETRY || 0}</td>
+          <td className="p-2">{totals.PENDING_REVIEW || 0}</td><td className="p-2">{(totals.FAILED || 0) + (totals.REJECTED || 0)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div>}
+    <p className="mt-3 text-xs text-gray-500">Each link is counted under its primary source, even if rediscovered elsewhere. Review handoffs are not a quality score. A link sent to review may update an existing draft. It does not necessarily create a new program.</p>
   </section>
 }
