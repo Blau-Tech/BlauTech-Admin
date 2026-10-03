@@ -1,6 +1,7 @@
 'use client'
 
 import ProgramBacklogStatus from '@/components/ProgramBacklogStatus'
+import ProgramBrowserApprovals from '@/components/ProgramBrowserApprovals'
 
 import { useEffect, useMemo, useState } from 'react'
 import Layout from '@/components/Layout'
@@ -190,7 +191,7 @@ export default function OpportunitiesPage() {
           </div>
         </div>
 
-        {isAdmin && <ProgramBacklogStatus />}
+        {isAdmin && <><ProgramBacklogStatus /><ProgramBrowserApprovals /></>}
 
         {isAdmin && (
           <section aria-labelledby="program-reviews-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
