@@ -77,7 +77,7 @@ export default function ProgramBacklogStatus() {
         {loading ? 'Loading queue…' : 'Refresh queue'}
       </button>
     </div>
-    <p className="mt-1 text-sm text-gray-600">Directory links are checked up to three at a time, twice daily. These counts track ingestion; publication still requires admin approval.</p>
+    <p className="mt-1 text-sm text-gray-600">Links are checked twice daily. Publishing requires your approval.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">Queue status unavailable: {error}</p>}
     {counts && <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
       {states.map(([status, label], index) => <div key={status}>
@@ -94,8 +94,7 @@ export default function ProgramBacklogStatus() {
           : 'No waiting links'}</dd>{capacity.oldest && <time dateTime={capacity.oldest} className="text-xs text-gray-500">Queued since {new Date(capacity.oldest).toLocaleString()}</time>}</div>
         <div><dt className="text-sm text-gray-600">Completed links in the last 7 days</dt><dd className="font-semibold">{capacity.completed}</dd></div>
       </dl>
-      {counts[0] > 0 && <p className="mt-3 text-sm text-gray-700">The waiting queue alone needs at least {Math.ceil(counts[0] / 6)} scheduled processing days at this limit. Retries and new links can increase the wait.</p>}
-      <p className="mt-2 text-xs text-gray-500">The limit is three reads per run at 10:15 and 18:15 Europe/Berlin. Manual runs can add reads. Completed links count current review handoffs or terminal outcomes dated within seven days; retry attempts are not included. This is not a completion forecast.</p>
+      {counts[0] > 0 && <p className="mt-3 text-sm text-gray-700">At least {Math.ceil(counts[0] / 6)} scheduled days for the waiting queue; retries and new links may add time.</p>}
     </div>}
     {sources && <div className="mt-5 overflow-x-auto">
       {refreshedAt && <p className="mb-2 text-xs text-gray-500">Counts refreshed <time dateTime={refreshedAt}>{new Date(refreshedAt).toLocaleString()}</time></p>}
@@ -125,8 +124,12 @@ export default function ProgramBacklogStatus() {
         })}</tbody>
       </table>
       {Object.keys(sources).length === 0 && <p className="mt-2 text-sm text-gray-600">No directory candidates have been recorded.</p>}
-      <p className="mt-2 text-xs text-gray-500">This is a snapshot of saved candidates, not source uptime or a success rate. Sources with no saved candidates do not appear. Rejections can be correct scope exclusions. Repeated attempts are not counted separately.</p>
     </div>}
-    <p className="mt-3 text-xs text-gray-500">Paused links are kept for later review and are not read automatically. Each link is counted under its primary source, even if rediscovered elsewhere. Review handoffs are not a quality score. A link sent to review may update an existing draft. It does not necessarily create a new program.</p>
+    <details className="mt-3 text-xs text-gray-500">
+      <summary className="cursor-pointer font-medium">How the queue works</summary>
+      <p className="mt-2 text-xs text-gray-500">The limit is three reads per run at 10:15 and 18:15 Europe/Berlin. Manual runs can add reads. Completed links count current review handoffs or terminal outcomes dated within seven days; retry attempts are not included. This is not a completion forecast.</p>
+      <p className="mt-2 text-xs text-gray-500">This is a snapshot of saved candidates, not source uptime or a success rate. Sources with no saved candidates do not appear. Rejections can be correct scope exclusions. Repeated attempts are not counted separately.</p>
+      <p className="mt-3 text-xs text-gray-500">Paused links are kept for later review and are not read automatically. Each link is counted under its primary source, even if rediscovered elsewhere. Review handoffs are not a quality score. A link sent to review may update an existing draft. It does not necessarily create a new program.</p>
+    </details>
   </section>
 }
