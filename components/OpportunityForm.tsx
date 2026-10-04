@@ -236,7 +236,7 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
             <option value="false">No</option>
           </select>
         </label>
-        <CheckboxField id="scope_confirmed" label="This is a relevant tech or founder opportunity and its applicant geography fits BlauTech’s audience" {...register('scope_confirmed')} />
+        <CheckboxField id="scope_confirmed" label="This is a relevant opportunity for an individual tech builder and its applicant geography fits BlauTech’s audience" {...register('scope_confirmed')} />
         <label className="block text-sm font-medium text-gray-700">
           Excluded: scholarship, job/internship, medical training, unrelated program, generic course catalogue or open networking membership
           <select {...register('excluded_program')} className={inputClass}>
