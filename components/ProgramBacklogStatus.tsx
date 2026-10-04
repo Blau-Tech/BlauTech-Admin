@@ -112,7 +112,7 @@ export default function ProgramBacklogStatus() {
             <th scope="row" className="p-2 break-all font-normal">{url}</th>
             <td className="p-2">
               {humanChecks > 0 && <p className="text-amber-800">Check unclear evidence</p>}
-              {readRetries + exhausted > 0 && <p className="text-red-700">Inspect reading failures</p>}
+              {readRetries + exhausted > 0 && <a href="#program-reading-failures" className="block text-red-700 underline">Inspect reading failures</a>}
               {humanChecks + readRetries + exhausted === 0 && <p className="text-gray-600">{hasChecked ? 'No current reading or evidence blockers' : (totals.QUEUED || 0) + (totals.PROCESSING || 0) > 0 ? 'Awaiting checks' : 'No active checks'}</p>}
               {(totals.PAUSED || 0) > 0 && <p className="mt-1 text-gray-600">Paused candidates retained</p>}
             </td>
