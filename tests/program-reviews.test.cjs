@@ -14,6 +14,21 @@ function apiWith(supabase) {
   return mod.exports.programReviewsApi
 }
 
+test('timing reminders use valid saved dates, keep the deadline day available and never infer closure from a start date', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../lib/programReviews.ts'), 'utf8')
+  const compiled = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS,target: ts.ScriptTarget.ES2020}}).outputText
+  const mod = {exports: {}}
+  new Function('module','exports','require',compiled)(mod,mod.exports,()=>({supabase:{}}))
+  const label = listing => mod.exports.reviewTimingLabel(listing,new Date('2026-10-04T23:30:00Z'))
+  assert.equal(label({deadline:'2026-10-03'}),'Deadline passed')
+  assert.equal(label({deadline:'2026-10-04'}),null)
+  assert.equal(label({deadline:'2026-10-05'}),null)
+  assert.equal(label({deadline:'2026-10-03',program_end_date:'2026-10-02'}),'Program ended')
+  assert.equal(label({program_end_date:'2026-10-04'}),null)
+  assert.equal(label({program_start_date:'2026-09-01',application_status:'UNKNOWN'}),null)
+  for(const deadline of [null,undefined,'2026-02-30','03/10/2026','2026-10-03T12:00:00Z','not a date']) assert.equal(label({deadline}),null)
+})
+
 test('manual links and updates queue privately instead of writing opportunities', async () => {
   const calls = []
   const api = apiWith({ rpc: async (...args) => { calls.push(args); return { data: [{ status: 'PENDING_REVIEW', review_id: 'r1' }] } } })

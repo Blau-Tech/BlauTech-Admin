@@ -22,6 +22,18 @@ export type ReviewDecision = {
   newApplicationRound?: boolean
 }
 
+export function reviewTimingLabel(listing: Record<string, any>, now = new Date()): string | null {
+  const today = now.toISOString().slice(0, 10)
+  const elapsed = (value: unknown) => typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value))
+    && new Date(value).toISOString().slice(0, 10) === value
+    && value < today
+  if (elapsed(listing.program_end_date)) return 'Program ended'
+  if (elapsed(listing.deadline)) return 'Deadline passed'
+  return null
+}
+
 export const programReviewsApi = {
   async fetch(status: ProgramReview['status'] = 'PENDING'): Promise<ProgramReview[]> {
     const { data, error } = await supabase.from('program_reviews')
