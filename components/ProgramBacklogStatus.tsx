@@ -14,6 +14,21 @@ const states = [
   ['MANUAL_REVIEW', 'Needs a human check'],
 ] as const
 
+function sourceName(value: string) {
+  try {
+    const url = new URL(value)
+    const host = url.hostname.replace(/^www\./, '')
+    if (host === 'search.brave.com') {
+      const query = url.searchParams.get('q') || ''
+      if (query.includes('student')) return 'Brave · student programs'
+      if (query.includes('fellowship')) return 'Brave · fellowships'
+      if (query.includes('residency') || query.includes('hacker house')) return 'Brave · residencies'
+      return 'Brave search'
+    }
+    return ({ 'hackermap.org': 'HackerMap', 'alpine-valley.com': 'Alpine Valley', 'runfutureproof.com': 'AcceleratorHub', 'startupquestion.com': 'StartupQuestion' } as Record<string, string>)[host] || host
+  } catch { return value }
+}
+
 export default function ProgramBacklogStatus() {
   const [counts, setCounts] = useState<number[] | null>(null)
   const [sources, setSources] = useState<Record<string, Record<string, number>> | null>(null)
@@ -72,54 +87,71 @@ export default function ProgramBacklogStatus() {
 
   return <section aria-labelledby="program-backlog-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 id="program-backlog-heading" className="text-lg font-semibold text-gray-900">Program ingestion queue</h2>
+      <h2 id="program-backlog-heading" className="text-lg font-semibold text-gray-900">How links become drafts</h2>
       <button type="button" onClick={refresh} disabled={loading} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">
         {loading ? 'Loading queue…' : 'Refresh queue'}
       </button>
     </div>
     <p className="mt-1 text-sm text-gray-600">Links are checked twice daily. Publishing requires your approval.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">Queue status unavailable: {error}</p>}
-    {counts && <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-      {states.map(([status, label], index) => <div key={status}>
-        <dt className="text-sm text-gray-600">{label}</dt>
-        <dd className="text-xl font-semibold text-gray-900">{counts[index]}</dd>
-      </div>)}
-    </dl>}
+    {counts && <>
+      <ol aria-label="Link checking flow" className="mt-5 grid gap-3 sm:grid-cols-3">
+        {[[0, '1. Waiting', 'Links to check'], [1, '2. Checking', 'Being read now'], [3, '3. Sent to review', 'Check drafts before publishing']].map(([index, label, hint]) => <li key={String(label)} className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+          <div className="text-sm font-medium text-blue-900">{label}</div>
+          <div className="my-1 text-3xl font-semibold text-gray-900">{counts[Number(index)]}</div>
+          <div className="text-sm text-gray-600">{hint}</div>
+        </li>)}
+      </ol>
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <a href="#program-evidence-heading" className="text-amber-800 underline">{counts[7]} need your help</a>
+        <a href="#program-reading-failures" className="text-red-700 underline">{counts[2]} retrying · {counts[4]} stopped</a>
+      </div>
+      <details className="mt-3 text-sm text-gray-500">
+        <summary className="cursor-pointer">Set aside: {counts[6]} paused · {counts[5]} excluded</summary>
+        <p className="mt-2">Paused links are outside our current focus. Excluded links did not qualify. Neither is waiting to be read.</p>
+      </details>
+    </>}
     {capacity && counts && <div className="mt-5 rounded-lg bg-gray-50 p-4">
-      <h3 className="font-medium text-gray-900">Processing capacity</h3>
+      <h3 className="font-medium text-gray-900">Checking speed</h3>
       <dl className="mt-3 grid gap-4 sm:grid-cols-3">
-        <div><dt className="text-sm text-gray-600">Scheduled read limit</dt><dd className="font-semibold">6 links per day</dd></div>
+        <div><dt className="text-sm text-gray-600">Daily limit</dt><dd className="font-semibold">6 links per day</dd></div>
         <div><dt className="text-sm text-gray-600">Oldest waiting link</dt><dd className="font-semibold">{capacity.oldest
           ? `${Math.max(0, Math.floor((Date.now() - Date.parse(capacity.oldest)) / 3600000))} hours`
           : 'No waiting links'}</dd>{capacity.oldest && <time dateTime={capacity.oldest} className="text-xs text-gray-500">Queued since {new Date(capacity.oldest).toLocaleString()}</time>}</div>
-        <div><dt className="text-sm text-gray-600">Completed links in the last 7 days</dt><dd className="font-semibold">{capacity.completed}</dd></div>
+        <div><dt className="text-sm text-gray-600">Finished checks in 7 days</dt><dd className="font-semibold">{capacity.completed}</dd></div>
       </dl>
       {counts[0] > 0 && <p className="mt-3 text-sm text-gray-700">At least {Math.ceil(counts[0] / 6)} scheduled days for the waiting queue; retries and new links may add time.</p>}
     </div>}
     {sources && <div className="mt-5 overflow-x-auto">
       {refreshedAt && <p className="mb-2 text-xs text-gray-500">Counts refreshed <time dateTime={refreshedAt}>{new Date(refreshedAt).toLocaleString()}</time></p>}
       <table className="w-full text-left text-sm">
-        <caption className="mb-2 text-left font-medium">Source health — current candidate states</caption>
-        <thead><tr><th scope="col" className="p-2">Primary source</th><th scope="col" className="p-2">Attention needed</th><th scope="col" className="p-2">Waiting / checking</th><th scope="col" className="p-2">Private handoffs</th><th scope="col" className="p-2">Human checks</th><th scope="col" className="p-2">Read retries / exhausted</th><th scope="col" className="p-2">Rejected / paused</th></tr></thead>
+        <caption className="mb-2 text-left font-medium">Where the links came from</caption>
+        <thead><tr><th scope="col" className="p-2">Source</th><th scope="col" className="p-2">To check</th><th scope="col" className="p-2">For review</th><th scope="col" className="p-2">Needs attention</th></tr></thead>
         <tbody>{Object.entries(sources).map(([url, totals]) => {
-          const humanChecks = totals.MANUAL_REVIEW || 0
-          const readRetries = totals.RETRY || 0
-          const exhausted = totals.FAILED || 0
-          const handoffs = totals.PENDING_REVIEW || 0
-          const hasChecked = handoffs + humanChecks + readRetries + exhausted + (totals.REJECTED || 0) + (totals.DUPLICATE || 0) + (totals.PUBLISHED || 0) > 0
+          const waiting = (totals.QUEUED || 0) + (totals.PROCESSING || 0)
+          const attention = (totals.MANUAL_REVIEW || 0) + (totals.RETRY || 0) + (totals.FAILED || 0)
           return <tr key={url} className="border-t border-gray-200">
-            <th scope="row" className="p-2 break-all font-normal">{url}</th>
+            <th scope="row" className="p-2 font-normal">
+              <div className="font-medium">{sourceName(url)}</div>
+              <details className="mt-1 text-xs text-gray-500">
+                <summary className="cursor-pointer">Details</summary>
+                <p className="mt-2 max-w-sm break-all">{url}</p>
+                <p>{totals.QUEUED || 0} waiting · {totals.PROCESSING || 0} checking</p>
+                <p>{totals.MANUAL_REVIEW || 0} need a human check · {totals.RETRY || 0} retrying · {totals.FAILED || 0} stopped</p>
+                <p>{totals.REJECTED || 0} excluded · {totals.PAUSED || 0} paused</p>
+                {(totals.DUPLICATE || 0) > 0 && <p>{totals.DUPLICATE} duplicates</p>}
+                {(totals.PUBLISHED || 0) > 0 && <p>{totals.PUBLISHED} published receipts</p>}
+              </details>
+            </th>
+            <td className="p-2 tabular-nums">{waiting}</td>
+            <td className="p-2 tabular-nums">{totals.PENDING_REVIEW || 0}</td>
             <td className="p-2">
-              {humanChecks > 0 && <p className="text-amber-800">Check unclear evidence</p>}
-              {readRetries + exhausted > 0 && <a href="#program-reading-failures" className="block text-red-700 underline">Inspect reading failures</a>}
-              {humanChecks + readRetries + exhausted === 0 && <p className="text-gray-600">{hasChecked ? 'No current reading or evidence blockers' : (totals.QUEUED || 0) + (totals.PROCESSING || 0) > 0 ? 'Awaiting checks' : 'No active checks'}</p>}
-              {(totals.PAUSED || 0) > 0 && <p className="mt-1 text-gray-600">Paused candidates retained</p>}
+              {attention > 0 ? <div className="text-amber-800">
+                <div className="font-medium">{attention} links</div>
+                {(totals.MANUAL_REVIEW || 0) > 0 && <a href="#program-evidence-heading" className="block underline">Human check</a>}
+                {(totals.RETRY || 0) + (totals.FAILED || 0) > 0 && <a href="#program-reading-failures" className="block underline">Reading issue</a>}
+              </div> : <span className="text-gray-500">None</span>}
             </td>
-            <td className="p-2"><p>{totals.QUEUED || 0} waiting</p><p>{totals.PROCESSING || 0} checking</p></td>
-            <td className="p-2"><p>{handoffs} sent to private review</p>{(totals.DUPLICATE || 0) > 0 && <p>{totals.DUPLICATE} duplicates</p>}{(totals.PUBLISHED || 0) > 0 && <p>{totals.PUBLISHED} published receipts</p>}</td>
-            <td className="p-2">{humanChecks}</td>
-            <td className="p-2"><p>{readRetries} waiting to retry</p><p>{exhausted} exhausted reads</p></td>
-            <td className="p-2"><p>{totals.REJECTED || 0} rejected</p><p>{totals.PAUSED || 0} paused</p></td>
           </tr>
         })}</tbody>
       </table>
