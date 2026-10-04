@@ -1,5 +1,6 @@
 'use client'
 
+import ProgramSources from '@/components/ProgramSources'
 import ProgramBacklogStatus from '@/components/ProgramBacklogStatus'
 import ProgramBrowserApprovals from '@/components/ProgramBrowserApprovals'
 import ProgramEvidenceHolds from '@/components/ProgramEvidenceHolds'
@@ -228,6 +229,8 @@ export default function OpportunitiesPage() {
             </ul>
           </section>
         )}
+
+        {isAdmin && <ProgramSources />}
 
         {isAdmin && <details className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
           <summary className="cursor-pointer text-lg font-semibold text-gray-900">Queue statistics &amp; sources</summary>
