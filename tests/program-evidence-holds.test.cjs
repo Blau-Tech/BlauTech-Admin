@@ -11,7 +11,8 @@ async function panel(data,rpcError=null){
  const mod={exports:{}};new Function('module','exports','require',compiled)(mod,mod.exports,name=>name==='react'?react:name==='@/lib/supabase'?{supabase:client}:{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})});
  const render=()=>{index=0;return mod.exports.default()};render();await effect();await new Promise(resolve=>setImmediate(resolve));
  const flatten=node=>!node?[]:Array.isArray(node)?node.flatMap(flatten):typeof node==='object'?[node,...flatten(node.props?.children)]:[];
- return {values,calls,buttons:()=>flatten(render()).filter(n=>n.type==='button'),note:()=>flatten(render()).find(n=>n.type==='input')};
+ const text=node=>node==null?'':Array.isArray(node)?node.map(text).join(' '):typeof node==='object'?text(node.props?.children):String(node);
+ return {values,calls,text:()=>text(render()),buttons:()=>flatten(render()).filter(n=>n.type==='button'),note:()=>flatten(render()).find(n=>n.type==='input')};
 }
 const page={id:'held-id',selected_official_url:'https://program.example/apply',outcome_reason:'Unclear ownership',attempt_count:1,updated_at:'2026-10-04T12:00:00Z'};
 test('holds query only manual-review directory pages; recheck binds the displayed revision',async()=>{
@@ -27,4 +28,20 @@ test('failed decision retains the held page',async()=>{
 test('rechecking never resets the five-read limit',async()=>{
  const p=await panel([{...page,attempt_count:5}]);p.note().props.onChange({target:{value:'Checked'}});
  const button=p.buttons().find(b=>b.props.children==='Recheck page');assert.equal(button.props.disabled,true);await button.props.onClick();assert.ok(!p.calls.some(c=>c.name));
+});
+test('review guidance uses known evidence reasons and preserves unfamiliar reasons without inventing dates or duplicates',async()=>{
+ for(const [reason,label] of [
+  ['Program identity or category needs review.','Program unclear'],
+  ['Program name is not verified by an exact source quote.','Program name unclear'],
+  ['Program category is not established by the source.','Program type unclear'],
+  ['Multiple program identities need to be separated before review.','Several programs found'],
+  ['Official website publisher ownership needs manual review.','Official source unclear'],
+  ['Employment versus standalone program participation needs manual review.','Job or program?'],
+  ['Unexpected evidence issue','Review needed'],
+ ]){
+  const p=await panel([{...page,outcome_reason:reason}]);
+  assert.ok(p.text().includes(label));assert.ok(p.text().includes(reason));
+  assert.doesNotMatch(p.text(),/past deadline|already reviewed|program ended/i);
+  assert.ok(!p.calls.some(call=>call.name),'Guidance cannot change queue state');
+ }
 });
