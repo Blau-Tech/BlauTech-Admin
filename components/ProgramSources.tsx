@@ -1,21 +1,54 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+
 const sources = [
-  { name: 'Alpine Valley', url: 'https://www.alpine-valley.com/hacker-houses', cadence: 'Tuesday · 10:00', state: 'Automatic' },
-  { name: 'StartupQuestion', url: 'https://www.startupquestion.com/vc-directory', cadence: 'Thursday · 10:00', state: 'Automatic' },
-  { name: 'HackerMap', url: 'https://hackermap.org/', cadence: 'On demand', state: 'Manual' },
-  { name: 'Nowwhere', url: 'https://nowwhere.city/', cadence: 'On demand', state: 'Manual' },
-  { name: 'AcceleratorHub', url: 'https://www.runfutureproof.com/acceleratorhub/programs', cadence: 'Outside our current focus', state: 'Paused' },
+  { key: 'alpine-hacker-houses', name: 'Alpine Valley', url: 'https://www.alpine-valley.com/hacker-houses', cadence: 'Tuesday · 10:00', state: 'Automatic' },
+  { key: 'startup-question', name: 'StartupQuestion', url: 'https://www.startupquestion.com/vc-directory', cadence: 'Thursday · 10:00', state: 'Automatic' },
+  { key: 'hackermap', name: 'HackerMap', url: 'https://hackermap.org/', cadence: 'On demand', state: 'Manual' },
+  { key: 'nowwhere-startup-houses', name: 'Nowwhere', url: 'https://nowwhere.city/', cadence: 'On demand', state: 'Manual' },
+  { key: 'accelerator-hub', name: 'AcceleratorHub', url: 'https://www.runfutureproof.com/acceleratorhub/programs', cadence: 'Outside our current focus', state: 'Paused' },
 ]
 
+type DirectoryRun = { source_key: string; status: 'STARTED' | 'SUCCEEDED'; started_at: string; finished_at: string | null }
+
 export default function ProgramSources() {
+  const [runs, setRuns] = useState<DirectoryRun[] | null>(null)
+  const [error, setError] = useState(false)
+  const [loading, setLoading] = useState(false)
+  async function refresh() {
+    setLoading(true)
+    setError(false)
+    try {
+      const { data, error } = await supabase.from('program_directory_runs').select('source_key,status,started_at,finished_at')
+      if (error || !Array.isArray(data) || data.some(row => !row
+        || !sources.some(source => source.key === row.source_key)
+        || !['STARTED', 'SUCCEEDED'].includes(row.status)
+        || typeof row.started_at !== 'string' || !Number.isFinite(Date.parse(row.started_at))
+        || (row.status === 'STARTED' ? row.finished_at !== null
+          : typeof row.finished_at !== 'string' || !Number.isFinite(Date.parse(row.finished_at))))) throw Error('Unavailable')
+      setRuns(data as DirectoryRun[])
+    } catch { setRuns(null); setError(true) }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { void refresh() }, [])
+  function lastRun(key: string) {
+    if (!runs) return error ? 'Last check unavailable' : 'Loading last check…'
+    const run = runs.find(row => row.source_key === key)
+    if (!run) return 'No check recorded yet'
+    const date = new Date(run.finished_at || run.started_at).toLocaleString('en-GB', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' })
+    return run.status === 'SUCCEEDED' ? `Collected · ${date}` : `Started · ${date} · completion not recorded`
+  }
   return <section aria-labelledby="program-sources-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
-    <h2 id="program-sources-heading" className="text-lg font-semibold text-gray-900">Connected directories</h2>
+    <div className="flex items-center justify-between gap-3"><h2 id="program-sources-heading" className="text-lg font-semibold text-gray-900">Connected directories</h2><button type="button" disabled={loading} onClick={refresh} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button></div>
     <p className="mt-1 text-sm text-gray-600">Configured collection schedule. Times are Europe/Berlin.</p>
     <ul className="mt-4 divide-y divide-gray-200">
       {sources.map(source => <li key={source.name} className="flex flex-wrap items-center justify-between gap-3 py-3">
         <div><a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 underline">{source.name}</a><p className="text-sm text-gray-600">{source.cadence}</p></div>
-        <div className="text-right text-sm"><span className={source.state === 'Automatic' ? 'font-medium text-blue-800' : 'font-medium text-gray-600'}>{source.state}</span><p className="text-xs text-gray-500">Last run: not tracked yet</p></div>
+        <div className="text-right text-sm"><span className={source.state === 'Automatic' ? 'font-medium text-blue-800' : 'font-medium text-gray-600'}>{source.state}</span><p className="text-xs text-gray-500">{lastRun(source.key)}</p></div>
       </li>)}
     </ul>
-    <p className="mt-3 text-xs text-gray-500">This lists configured sources, not live service health. Candidate counts appear under queue statistics.</p>
+    <p className="mt-3 text-xs text-gray-500">Collection checks directory links. Individual programs are checked separately before review.</p>
   </section>
 }
