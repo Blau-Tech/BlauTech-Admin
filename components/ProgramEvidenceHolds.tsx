@@ -52,7 +52,7 @@ export default function ProgramEvidenceHolds() {
       <h2 id="program-evidence-heading" className="text-lg font-semibold">Pages needing a human check</h2>
       <button type="button" disabled={busy} onClick={refresh} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">{busy ? 'Loading…' : 'Refresh evidence holds'}</button>
     </div>
-    <p className="mt-2 text-sm text-gray-600">These pages lack clear evidence and are not read automatically. Check the official page, leave a note, then recheck or dismiss it. Rechecking uses the normal schedule and still requires publication review.</p>
+    <p className="mt-2 text-sm text-gray-600">Check the page, add a note, then recheck or dismiss. Rechecks run on the normal schedule.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     {pages?.length === 0 && <p className="mt-3 text-sm text-gray-600">No pages are awaiting a human check.</p>}
     {pages && pages.length > 0 && <ul className="mt-4 divide-y divide-gray-200">{pages.map(page => <li key={page.id} className="py-3">

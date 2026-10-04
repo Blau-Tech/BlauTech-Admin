@@ -198,7 +198,7 @@ export default function OpportunitiesPage() {
         {isAdmin && (
           <section aria-labelledby="program-reviews-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
             <h2 id="program-reviews-heading" className="text-lg font-semibold text-gray-900">Program reviews</h2>
-            <p className="mt-1 text-sm text-gray-600">Opportunities for individual tech builders: fellowships and learning programs, residencies and hacker houses. Check individual eligibility and confirm that no existing company is required. New listings and changes stay private until approved.</p>
+            <p className="mt-1 text-sm text-gray-600">For individual tech builders; no existing company required. Drafts stay private until approved.</p>
             <div className="my-4 flex flex-wrap gap-2" aria-label="Review status">
               {(['PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
                 <button key={status} type="button" aria-pressed={reviewStatus === status} onClick={() => setReviewStatus(status)}

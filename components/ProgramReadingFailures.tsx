@@ -54,7 +54,7 @@ export default function ProgramReadingFailures() {
       <h2 id="program-reading-failures-heading" className="text-lg font-semibold">Pages with reading failures</h2>
       <button type="button" disabled={loading} onClick={refresh} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">{loading ? 'Loading…' : 'Refresh reading failures'}</button>
     </div>
-    <p className="mt-2 text-sm text-gray-600">These pages could not be read reliably. Retrying pages wait for the normal schedule; exhausted pages stop automatically. Reading failures do not mean a program is ineligible.</p>
+    <p className="mt-2 text-sm text-gray-600">Reading failed. Retries run automatically; stopped pages need attention.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     {pages?.length === 0 && <p className="mt-3 text-sm text-gray-600">No current reading failures.</p>}
     {pages && pages.length > 0 && <ul className="mt-4 divide-y divide-gray-200">{pages.map(page => <li key={page.id} className="py-3">
@@ -64,7 +64,7 @@ export default function ProgramReadingFailures() {
       <p className="mt-1 text-sm text-gray-600">Primary source: {page.source_key || 'Unknown source'} · {page.attempt_count} read attempts</p>
       <p className="mt-1 text-sm text-red-700">{page.outcome_reason || 'No failure reason recorded.'}</p>
       <p className="mt-1 text-sm text-gray-600">{page.status === 'FAILED' ? 'Stopped after failures. No automatic retry.' : page.available_at && Number.isFinite(Date.parse(page.available_at))
-        ? <>Eligible for retry from <time dateTime={page.available_at}>{new Date(page.available_at).toLocaleString()}</time>. The next scheduled run checks up to three links.</>
+        ? <>Eligible for retry from <time dateTime={page.available_at}>{new Date(page.available_at).toLocaleString()}</time>. Retry runs on the normal schedule.</>
         : 'Waiting to retry; retry time unavailable.'}</p>
     </li>)}</ul>}
     {pages?.length === 50 && <p className="mt-3 text-xs text-gray-500">Showing the 50 most recently updated failures.</p>}

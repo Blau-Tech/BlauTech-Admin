@@ -52,7 +52,7 @@ export default function ProgramBrowserApprovals() {
       <h2 id="program-browser-heading" className="text-lg font-semibold">Pages needing browser reading</h2>
       <button type="button" disabled={busy} onClick={refresh} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">{busy ? 'Loading…' : 'Refresh held pages'}</button>
     </div>
-    <p className="mt-2 text-sm text-gray-600">Approve browser reading for the exact URL below. The worker will retry it on its normal schedule. Programs still need your review before publication.</p>
+    <p className="mt-2 text-sm text-gray-600">Approve browser reading for the listed URL. It will retry on the normal schedule.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     {pages?.length === 0 && <p className="mt-3 text-sm text-gray-600">No pages are awaiting browser reading.</p>}
     {pages && pages.length > 0 && <ul className="mt-4 divide-y divide-gray-200">{pages.map(page => <li key={page.id} className="py-3">
