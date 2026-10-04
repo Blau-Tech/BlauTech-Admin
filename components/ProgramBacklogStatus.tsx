@@ -20,6 +20,7 @@ export default function ProgramBacklogStatus() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [capacity, setCapacity] = useState<{ oldest: string | null; completed: number } | null>(null)
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null)
 
   async function refresh() {
     setLoading(true)
@@ -35,7 +36,7 @@ export default function ProgramBacklogStatus() {
       if (!Array.isArray(sourceResult.data)) throw new Error('Source counts unavailable')
       const grouped: Record<string, Record<string, number>> = Object.create(null)
       for (const row of sourceResult.data) {
-        if (typeof row.source_url !== 'string' || typeof row.status !== 'string' || !Number.isSafeInteger(Number(row.candidates)) || Number(row.candidates) < 0) throw new Error('Invalid source count')
+        if (typeof row.source_url !== 'string' || !row.source_url.trim() || typeof row.status !== 'string' || (typeof row.candidates !== 'number' && (typeof row.candidates !== 'string' || !/^[0-9]+$/.test(row.candidates))) || !Number.isSafeInteger(Number(row.candidates)) || Number(row.candidates) < 0) throw new Error('Invalid source count')
         grouped[row.source_url] ||= Object.create(null)
         grouped[row.source_url][row.status] = Number(row.candidates)
       }
@@ -55,10 +56,12 @@ export default function ProgramBacklogStatus() {
       setCapacity({ oldest: oldest.data[0]?.available_at || null, completed: completed.count })
       setSources(grouped)
       setCounts(results.map(result => result.count!))
+      setRefreshedAt(new Date().toISOString())
     } catch (err) {
       setCounts(null)
       setSources(null)
       setCapacity(null)
+      setRefreshedAt(null)
       setError(err instanceof Error ? err.message : 'Unable to load queue status')
     } finally {
       setLoading(false)
@@ -95,15 +98,34 @@ export default function ProgramBacklogStatus() {
       <p className="mt-2 text-xs text-gray-500">The limit is three reads per run at 10:15 and 18:15 Europe/Berlin. Manual runs can add reads. Completed links count current review handoffs or terminal outcomes dated within seven days; retry attempts are not included. This is not a completion forecast.</p>
     </div>}
     {sources && <div className="mt-5 overflow-x-auto">
+      {refreshedAt && <p className="mb-2 text-xs text-gray-500">Counts refreshed <time dateTime={refreshedAt}>{new Date(refreshedAt).toLocaleString()}</time></p>}
       <table className="w-full text-left text-sm">
-        <caption className="mb-2 text-left font-medium">By primary discovery source</caption>
-        <thead><tr><th className="p-2">Source</th><th className="p-2">Waiting</th><th className="p-2">Retry</th><th className="p-2">Sent to review</th><th className="p-2">Stopped</th><th className="p-2">Paused</th><th className="p-2">Human check</th></tr></thead>
-        <tbody>{Object.entries(sources).map(([url, totals]) => <tr key={url} className="border-t border-gray-200">
-          <th className="p-2 break-all font-normal">{url}</th>
-          <td className="p-2">{totals.QUEUED || 0}</td><td className="p-2">{totals.RETRY || 0}</td>
-          <td className="p-2">{totals.PENDING_REVIEW || 0}</td><td className="p-2">{(totals.FAILED || 0) + (totals.REJECTED || 0)}</td><td className="p-2">{totals.PAUSED || 0}</td><td className="p-2">{totals.MANUAL_REVIEW || 0}</td>
-        </tr>)}</tbody>
+        <caption className="mb-2 text-left font-medium">Source health — current candidate states</caption>
+        <thead><tr><th scope="col" className="p-2">Primary source</th><th scope="col" className="p-2">Attention needed</th><th scope="col" className="p-2">Waiting / checking</th><th scope="col" className="p-2">Private handoffs</th><th scope="col" className="p-2">Human checks</th><th scope="col" className="p-2">Read retries / exhausted</th><th scope="col" className="p-2">Rejected / paused</th></tr></thead>
+        <tbody>{Object.entries(sources).map(([url, totals]) => {
+          const humanChecks = totals.MANUAL_REVIEW || 0
+          const readRetries = totals.RETRY || 0
+          const exhausted = totals.FAILED || 0
+          const handoffs = totals.PENDING_REVIEW || 0
+          const hasChecked = handoffs + humanChecks + readRetries + exhausted + (totals.REJECTED || 0) + (totals.DUPLICATE || 0) + (totals.PUBLISHED || 0) > 0
+          return <tr key={url} className="border-t border-gray-200">
+            <th scope="row" className="p-2 break-all font-normal">{url}</th>
+            <td className="p-2">
+              {humanChecks > 0 && <p className="text-amber-800">Check unclear evidence</p>}
+              {readRetries + exhausted > 0 && <p className="text-red-700">Inspect reading failures</p>}
+              {humanChecks + readRetries + exhausted === 0 && <p className="text-gray-600">{hasChecked ? 'No current reading or evidence blockers' : (totals.QUEUED || 0) + (totals.PROCESSING || 0) > 0 ? 'Awaiting checks' : 'No active checks'}</p>}
+              {(totals.PAUSED || 0) > 0 && <p className="mt-1 text-gray-600">Paused candidates retained</p>}
+            </td>
+            <td className="p-2"><p>{totals.QUEUED || 0} waiting</p><p>{totals.PROCESSING || 0} checking</p></td>
+            <td className="p-2"><p>{handoffs} sent to private review</p>{(totals.DUPLICATE || 0) > 0 && <p>{totals.DUPLICATE} duplicates</p>}{(totals.PUBLISHED || 0) > 0 && <p>{totals.PUBLISHED} published receipts</p>}</td>
+            <td className="p-2">{humanChecks}</td>
+            <td className="p-2"><p>{readRetries} waiting to retry</p><p>{exhausted} exhausted reads</p></td>
+            <td className="p-2"><p>{totals.REJECTED || 0} rejected</p><p>{totals.PAUSED || 0} paused</p></td>
+          </tr>
+        })}</tbody>
       </table>
+      {Object.keys(sources).length === 0 && <p className="mt-2 text-sm text-gray-600">No directory candidates have been recorded.</p>}
+      <p className="mt-2 text-xs text-gray-500">This is a snapshot of saved candidates, not source uptime or a success rate. Sources with no saved candidates do not appear. Rejections can be correct scope exclusions. Repeated attempts are not counted separately.</p>
     </div>}
     <p className="mt-3 text-xs text-gray-500">Paused links are kept for later review and are not read automatically. Each link is counted under its primary source, even if rediscovered elsewhere. Review handoffs are not a quality score. A link sent to review may update an existing draft. It does not necessarily create a new program.</p>
   </section>
