@@ -73,11 +73,11 @@ export default function ProgramSources() {
     const run = runs.find(row => row.source_key === key)
     if (!run) return 'No check recorded yet'
     const date = new Date(run.finished_at || run.started_at).toLocaleString('en-GB', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' })
-    return run.status === 'FAILED' ? `Check failed · ${date}` : run.status === 'SUCCEEDED' ? `Collected · ${date}` : watch?.key === key && run.execution_id !== watch.previousId ? `Checking · ${date}` : `Started · ${date} · completion not recorded`
+    return run.status === 'FAILED' ? `Check failed · ${date}` : run.status === 'SUCCEEDED' ? `Directory checked · ${date}` : watch?.key === key && run.execution_id !== watch.previousId ? `Checking · ${date}` : `Started · ${date} · completion not recorded`
   }
   return <section aria-labelledby="program-sources-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
     <div className="flex items-center justify-between gap-3"><h2 id="program-sources-heading" className="text-lg font-semibold text-gray-900">Connected directories</h2><button type="button" disabled={loading} onClick={refresh} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button></div>
-    <p className="mt-1 text-sm text-gray-600">Configured collection schedule. Times are Europe/Berlin.</p>
+    <p className="mt-1 text-sm text-gray-600">Check now finds program links. Times are Europe/Berlin.</p>
     <p role="status" className="mt-2 text-sm text-gray-600">{notice}</p>
     <ul className="mt-4 divide-y divide-gray-200">
       {sources.map(source => <li key={source.name} className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -85,6 +85,6 @@ export default function ProgramSources() {
         <div className="text-right text-sm"><span className={source.state === 'Automatic' ? 'font-medium text-blue-800' : 'font-medium text-gray-600'}>{source.state}</span><p className={runs?.some(run => run.source_key === source.key && run.status === 'FAILED') ? 'text-xs text-red-700' : 'text-xs text-gray-500'}>{lastRun(source.key)}</p>{source.state !== 'Paused' && <button type="button" disabled={requesting !== null || watch !== null || runs === null} onClick={() => collect(source.key)} className="mt-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50">{requesting === source.key ? 'Requesting…' : watch?.key === source.key ? 'Waiting for result…' : 'Check now'}</button>}</div>
       </li>)}
     </ul>
-    <p className="mt-3 text-xs text-gray-500">Collection checks directory links. Individual programs are checked separately before review.</p>
+    <p className="mt-3 text-xs text-gray-500">The queue checks each program next. Publishing needs your approval.</p>
   </section>
 }
