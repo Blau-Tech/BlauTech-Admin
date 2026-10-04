@@ -60,6 +60,7 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
     }
     setLoading(true)
     try {
+      if (action === 'APPROVE' && (!['FELLOWSHIP','STUDENT_PROGRAM','CAREER_DEVELOPMENT','RESIDENCY','FOUNDER_PROGRAM','COMMUNITY'].includes(data.program_subtype) || data.individual_eligible !== 'true' || data.no_company_required !== 'true')) throw new Error('Approval requires an individual program with no existing company required.');
       let listing = data
       if (action !== 'REJECT') {
         const url = new URL(String(data.url || '').trim())
@@ -152,7 +153,7 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
         <TextareaField id="description" label="Description" required {...register('description', { required: true })} />
         <TextField id="url" type="url" label="Official application page" required {...register('url', { required: true })} />
         <label className="block text-sm font-medium text-gray-700">
-          Category
+          Detailed program type
           <select {...register('program_subtype')} className={inputClass}>
             <option value="">Unclear — needs review</option>
             <option value="FELLOWSHIP">Fellowship</option>
@@ -160,10 +161,10 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
             <option value="COMMUNITY">Builder community</option>
             <option value="STUDENT_PROGRAM">Student program</option>
             <option value="CAREER_DEVELOPMENT">Career development</option>
-            <option value="ACCELERATOR">Accelerator</option>
-            <option value="INCUBATOR">Incubator</option>
-            <option value="FOUNDER_PROGRAM">Founder program</option>
-            <option value="STARTUP_FUNDING">Startup funding</option>
+
+
+            <option value="FOUNDER_PROGRAM">Individual builder / founder program</option>
+
           </select>
         </label>
         <MultiSelect label="BlauTech audience cities (empty means all cities)" options={CITY_OPTIONS} selected={cities} onChange={setCities} />
@@ -210,7 +211,7 @@ export default function OpportunityForm({ initialData, review, onSubmit, onCance
       </FormSection>
 
       <FormSection title="Eligibility checks">
-        <p className="text-sm text-gray-600">Individual categories require eligibility without an existing company. Startup categories may require a team or company: record the exact requirements above. Student and career programs need a structured tech offer; other categories require selective admission or funding allocation.</p>
+        <p className="text-sm text-gray-600">Focus: fellowships and learning programs; residencies and hacker houses. Approval requires individual eligibility without an existing startup or company. Exclude scholarships, ordinary jobs, accelerators, incubators, startup funding and accommodation alone. Student and career programs need a structured tech offer.</p>
         <label className="block text-sm font-medium text-gray-700">
           Can individuals apply?
           <select {...register('individual_eligible')} className={inputClass}>
