@@ -87,3 +87,19 @@ test('unconfirmed requests stop automatic refresh after two minutes', async () =
   assert.equal(result.timers.length,0)
   assert.doesNotMatch(text(result.render()),/check finished/)
 })
+
+test('a new failure ends automatic updates and keeps retry available', async () => {
+ const old={execution_id:'1',source_key:'alpine-hacker-houses',status:'SUCCEEDED',started_at:'2026-10-04T10:00:00Z',finished_at:'2026-10-04T10:01:00Z'}
+ const result=await panel({data:[old],error:null},{status:200,ok:true})
+ await nodes(result.tree).find(node=>node.type==='button' && text(node)==='Check now').props.onClick()
+ result.monitor()
+ result.setResponse({data:[{...old,execution_id:'2',status:'FAILED'}],error:null})
+ await result.timers.shift()(); await new Promise(resolve=>setImmediate(resolve))
+ result.monitor()
+ const tree=result.render()
+ assert.match(text(tree),/Check failed/)
+ assert.match(text(tree),/You can try Check now again/)
+ assert.doesNotMatch(text(tree),/check finished/)
+ assert.equal(nodes(tree).find(node=>node.type==='button' && text(node)==='Check now').props.disabled,false)
+ result.monitor(); assert.equal(result.timers.length,0)
+})
