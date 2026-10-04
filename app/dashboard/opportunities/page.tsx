@@ -13,7 +13,7 @@ import OpportunityForm from '@/components/OpportunityForm'
 import GlassCard from '@/components/ui/GlassCard'
 import Badge from '@/components/ui/Badge'
 import { opportunitiesApi } from '@/lib/api'
-import { programReviewsApi, type ProgramReview, type ReviewDecision } from '@/lib/programReviews'
+import { programReviewsApi, reviewTimingLabel, type ProgramReview, type ReviewDecision } from '@/lib/programReviews'
 import { useAuth } from '@/lib/auth'
 import { format } from 'date-fns'
 
@@ -211,12 +211,13 @@ export default function OpportunitiesPage() {
             </div>
             {!reviews.length && <p className="text-sm text-gray-500">No {reviewStatus.toLowerCase()} reviews.</p>}
             <ul className="divide-y divide-gray-200">
-              {reviews.map(review => (
+              {reviews.map(review => { const timing = reviewTimingLabel(review.proposed_listing); return (
                 <li key={review.id} className="flex flex-wrap items-start justify-between gap-3 py-4">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-medium">{review.proposed_listing.title || 'Untitled program'}</h3>
                     <p className="text-sm text-gray-600">{review.proposed_listing.organisation} · {review.proposed_listing.program_subtype || 'Category needs review'}</p>
-                    <p className="text-sm text-gray-500">{review.opportunity_id ? 'Proposed update' : 'New listing'} · Applications: {review.proposed_listing.application_status || 'UNKNOWN'}</p>
+                    <p className="text-sm text-gray-500">{review.opportunity_id ? 'Existing listing · proposed update' : 'New listing'} · Recorded applications: {review.proposed_listing.application_status || 'UNKNOWN'}</p>
+                    {timing && <div className="mt-2"><Badge color="amber" size="sm">{timing}</Badge><p className="mt-1 text-xs text-gray-500">Based on saved dates (UTC). Check the source for a newer intake.</p></div>}
                     {review.proposed_listing.deadline && <p className="text-sm text-gray-500">Deadline: {review.proposed_listing.deadline}</p>}
                     {review.rejection_reason && <p className="mt-1 text-sm text-red-700">Reason: {review.rejection_reason}</p>}
                     {review.reviewed_at && <p className="text-xs text-gray-500">Reviewed {new Date(review.reviewed_at).toLocaleString()}{review.reviewed_by ? ` · Admin ${review.reviewed_by}` : ''}</p>}
@@ -225,7 +226,7 @@ export default function OpportunitiesPage() {
                   {review.status === 'PENDING' && <button type="button" className="rounded-lg border border-primary-300 px-4 py-2 text-sm text-primary-700"
                     onClick={() => { setEditingOpp(null); setEditingReview(review); setIsModalOpen(true) }}>Review proposal</button>}
                 </li>
-              ))}
+              )})}
             </ul>
           </section>
         )}
