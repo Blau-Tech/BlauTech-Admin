@@ -17,6 +17,8 @@ export default function ProgramSources() {
   const [runs, setRuns] = useState<DirectoryRun[] | null>(null)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [requesting, setRequesting] = useState<string | null>(null)
+  const [notice, setNotice] = useState('')
   async function refresh() {
     setLoading(true)
     setError(false)
@@ -32,6 +34,20 @@ export default function ProgramSources() {
     } catch { setRuns(null); setError(true) }
     finally { setLoading(false) }
   }
+  async function collect(key: string) {
+    setRequesting(key)
+    setNotice('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw Error('Please sign in again.')
+      const response = await fetch(`/api/workflows/program-directory-${key}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: '{}',
+      })
+      if (response.status !== 202) throw Error('Could not start collection. Please try again later.')
+      setNotice('Collection requested. Refresh shortly to see its progress.')
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Collection unavailable.') }
+    finally { setRequesting(null) }
+  }
   useEffect(() => { void refresh() }, [])
   function lastRun(key: string) {
     if (!runs) return error ? 'Last check unavailable' : 'Loading last check…'
@@ -43,10 +59,11 @@ export default function ProgramSources() {
   return <section aria-labelledby="program-sources-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
     <div className="flex items-center justify-between gap-3"><h2 id="program-sources-heading" className="text-lg font-semibold text-gray-900">Connected directories</h2><button type="button" disabled={loading} onClick={refresh} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">{loading ? 'Loading…' : 'Refresh'}</button></div>
     <p className="mt-1 text-sm text-gray-600">Configured collection schedule. Times are Europe/Berlin.</p>
+    <p role="status" className="mt-2 text-sm text-gray-600">{notice}</p>
     <ul className="mt-4 divide-y divide-gray-200">
       {sources.map(source => <li key={source.name} className="flex flex-wrap items-center justify-between gap-3 py-3">
         <div><a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 underline">{source.name}</a><p className="text-sm text-gray-600">{source.cadence}</p></div>
-        <div className="text-right text-sm"><span className={source.state === 'Automatic' ? 'font-medium text-blue-800' : 'font-medium text-gray-600'}>{source.state}</span><p className="text-xs text-gray-500">{lastRun(source.key)}</p></div>
+        <div className="text-right text-sm"><span className={source.state === 'Automatic' ? 'font-medium text-blue-800' : 'font-medium text-gray-600'}>{source.state}</span><p className="text-xs text-gray-500">{lastRun(source.key)}</p>{source.state !== 'Paused' && <button type="button" disabled={requesting !== null} onClick={() => collect(source.key)} className="mt-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50">{requesting === source.key ? 'Requesting…' : 'Check now'}</button>}</div>
       </li>)}
     </ul>
     <p className="mt-3 text-xs text-gray-500">Collection checks directory links. Individual programs are checked separately before review.</p>

@@ -15,7 +15,13 @@ const LINKEDIN_CONTENT_TYPES = {
 
 const BERLIN_LINKEDIN_WORKFLOW_PATH = 'blau-network-linkedin-draft-berlin'
 
+const DIRECTORY_WORKFLOW_PATHS = [
+  'program-directory-alpine-hacker-houses', 'program-directory-startup-question',
+  'program-directory-hackermap', 'program-directory-nowwhere-startup-houses',
+] as const
+
 const ALLOWED_WORKFLOW_PATHS = [
+  ...DIRECTORY_WORKFLOW_PATHS,
   ...LINKEDIN_WORKFLOW_PATHS,
   'blau-network-newsletter',
 ] as const
@@ -107,6 +113,13 @@ export function authorizeWorkflowRequest(
 
   if (!claims.hasAccess) {
     return { allowed: false, status: 403, message: 'You do not have permission to trigger workflows.' }
+  }
+
+  if ((DIRECTORY_WORKFLOW_PATHS as readonly string[]).includes(path)) {
+    if (!claims.isAdmin) return { allowed: false, status: 403, message: 'Only admins can collect directory links.' }
+    return typeof payload === 'object' && payload !== null && !Array.isArray(payload) && Object.keys(payload).length === 0
+      ? { allowed: true }
+      : { allowed: false, status: 400, message: 'Directory collection expects an empty object.' }
   }
 
   if (

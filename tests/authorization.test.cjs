@@ -185,3 +185,16 @@ test('requires test_mode to be a real boolean', () => {
     assert.equal(authorizeWorkflowRequest('blau-network-newsletter', payload, admin).status, 400)
   }
 })
+
+test('directory collection is restricted to full admins and fixed empty requests', () => {
+  const paths=['program-directory-alpine-hacker-houses','program-directory-startup-question','program-directory-hackermap','program-directory-nowwhere-startup-houses']
+  const admin=getAccessClaims({app_metadata:{role:'admin'}})
+  const cityLead=getAccessClaims({app_metadata:{role:'city_lead',city:'BERLIN'}})
+  for(const path of paths) {
+    assert.equal(authorizeWorkflowRequest(path,{},admin).allowed,true)
+    assert.equal(authorizeWorkflowRequest(path,{},cityLead).status,403)
+    assert.equal(authorizeWorkflowRequest(path,{url:'https://other.example'},admin).status,400)
+    assert.equal(resolveN8nWorkflowPath(path,null),path)
+  }
+  assert.equal(authorizeWorkflowRequest('program-directory-accelerator-hub',{},admin).status,404)
+})
