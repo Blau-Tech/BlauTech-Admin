@@ -129,8 +129,8 @@ function rowsOf(node) {
   if (!node || typeof node !== 'object') return []
   return [...(node.type === 'tr' ? [textOf(node).replace(/\s+/g,' ')] : []), ...rowsOf(node.props?.children)]
 }
-test('source health separates evidence holds, technical failures and correct exclusions', async () => {
-  const {render, values} = await loadPanel(() => ({count:0,error:null}), {data:[
+test('simple source totals keep human checks, retries and set-aside links distinct', async () => {
+  const {render} = await loadPanel(() => ({count:0,error:null}), {data:[
     {source_url:'https://unclear.example',status:'MANUAL_REVIEW',candidates:3},
     {source_url:'https://unclear.example',status:'PENDING_REVIEW',candidates:2},
     {source_url:'https://broken.example',status:'RETRY',candidates:1},
@@ -138,19 +138,32 @@ test('source health separates evidence holds, technical failures and correct exc
     {source_url:'https://excluded.example',status:'REJECTED',candidates:7},
     {source_url:'https://excluded.example',status:'PAUSED',candidates:170},
     {source_url:'https://new.example',status:'QUEUED',candidates:6},
+    {source_url:'https://new.example',status:'PROCESSING',candidates:2},
   ],error:null})
   const rows=rowsOf(render())
-  const unclear=rows.find(row=>row.includes('https://unclear.example'))
-  assert.match(unclear,/Check unclear evidence/);assert.doesNotMatch(unclear,/Inspect reading failures/)
-  assert.match(unclear,/2 sent to private review/)
-  const broken=rows.find(row=>row.includes('https://broken.example'))
-  assert.match(broken,/Inspect reading failures/);assert.match(broken,/1 waiting to retry/);assert.match(broken,/4 exhausted reads/)
+  assert.match(rows.find(row=>row.includes('https://unclear.example')), /3 links Human check/)
+  assert.match(rows.find(row=>row.includes('https://broken.example')), /5 links Reading issue/)
   const excluded=rows.find(row=>row.includes('https://excluded.example'))
-  assert.doesNotMatch(excluded,/Inspect reading failures|Check unclear evidence/)
-  assert.match(excluded,/7 rejected/);assert.match(excluded,/170 paused/)
-  assert.match(rows.find(row=>row.includes('https://new.example')),/Awaiting checks/)
-  assert.ok(Number.isFinite(Date.parse(values[5])))
+  assert.match(excluded,/7 excluded · 170 paused/)
+  assert.doesNotMatch(excluded,/Human check|Reading issue/)
+  assert.match(rows.find(row=>row.includes('https://new.example')), /6 waiting · 2 checking.* 8 0 None/)
   assert.match(textOf(render()),/not source uptime or a success rate/)
+})
+test('flow preserves separate counts and uses readable source names', async () => {
+  const counts={QUEUED:19,PROCESSING:2,RETRY:1,PENDING_REVIEW:8,FAILED:3,REJECTED:1,PAUSED:170,MANUAL_REVIEW:4}
+  const {render}=await loadPanel(status=>({count:counts[status],error:null}),{data:[
+    {source_url:'https://search.brave.com/search?q=%22student%20program%22',status:'QUEUED',candidates:6},
+    {source_url:'https://www.alpine-valley.com/hacker-houses',status:'PENDING_REVIEW',candidates:3},
+  ],error:null})
+  const text=textOf(render()).replace(/\s+/g,' ')
+  assert.match(text,/1. Waiting 19/)
+  assert.match(text,/2. Checking 2/)
+  assert.match(text,/3. Sent to review 8/)
+  assert.match(text,/4 need your help/)
+  assert.match(text,/1 retrying · 3 stopped/)
+  assert.match(text,/170 paused · 1 excluded/)
+  assert.match(text,/Brave · student programs/)
+  assert.match(text,/Alpine Valley/)
 })
 test('malformed source counts never produce a healthy zero', async () => {
   for (const candidates of [null,'',false,'-1','not-a-number']) {
