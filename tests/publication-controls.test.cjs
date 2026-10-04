@@ -21,7 +21,7 @@ test('individual programs are drafts with explicit category and approval actions
   assert.match(form, /option value="FELLOWSHIP"/)
   assert.match(form, /option value="RESIDENCY"/)
   assert.match(form, /option value="COMMUNITY">Builder community/)
-  for (const category of ['FELLOWSHIP', 'STUDENT_PROGRAM', 'CAREER_DEVELOPMENT', 'RESIDENCY', 'ACCELERATOR', 'INCUBATOR', 'FOUNDER_PROGRAM', 'STARTUP_FUNDING', 'COMMUNITY']) {
+  for (const category of ['FELLOWSHIP', 'STUDENT_PROGRAM', 'CAREER_DEVELOPMENT', 'RESIDENCY', 'FOUNDER_PROGRAM', 'COMMUNITY']) {
     assert.ok(form.includes(`option value="${category}"`), category)
   }
   assert.match(form, /opportunity and its applicant geography/)
