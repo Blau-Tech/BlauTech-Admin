@@ -193,7 +193,7 @@ export default function OpportunitiesPage() {
           </div>
         </div>
 
-        {isAdmin && <><ProgramBacklogStatus /><ProgramReadingFailures /><ProgramBrowserApprovals /><ProgramEvidenceHolds /></>}
+        {isAdmin && <><ProgramBrowserApprovals /><ProgramEvidenceHolds /><ProgramReadingFailures /></>}
 
         {isAdmin && (
           <section aria-labelledby="program-reviews-heading" className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
@@ -228,6 +228,11 @@ export default function OpportunitiesPage() {
             </ul>
           </section>
         )}
+
+        {isAdmin && <details className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
+          <summary className="cursor-pointer text-lg font-semibold text-gray-900">Queue statistics &amp; sources</summary>
+          <div className="mt-4"><ProgramBacklogStatus /></div>
+        </details>}
 
         <div className="mb-4 flex flex-wrap gap-2">
           {TYPE_FILTERS.map((tf) => (
