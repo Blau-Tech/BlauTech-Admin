@@ -43,7 +43,7 @@ export default function ProgramSources() {
       const response = await fetch(`/api/workflows/program-directory-${key}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: '{}',
       })
-      if (response.status !== 202) throw Error('Could not start collection. Please try again later.')
+      if (!response.ok) throw Error('Could not start collection. Please try again later.')
       setNotice('Collection requested. Refresh shortly to see its progress.')
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Collection unavailable.') }
     finally { setRequesting(null) }
