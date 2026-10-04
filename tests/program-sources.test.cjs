@@ -40,7 +40,7 @@ const nodes = node => Array.isArray(node) ? node.flatMap(nodes) : node && typeof
 
 test('directory records distinguish success, unfinished, empty and unavailable', async () => {
   const run={execution_id:'1',source_key:'hackermap',status:'SUCCEEDED',started_at:'2026-10-04T10:00:00Z',finished_at:'2026-10-04T10:01:00Z'}
-  assert.match(text((await panel({data:[run],error:null})).tree),/Collected/)
+  assert.match(text((await panel({data:[run],error:null})).tree),/Directory checked/)
   assert.match(text((await panel({data:[{...run,status:'STARTED',finished_at:null}],error:null})).tree),/completion not recorded/)
   assert.match(text((await panel({data:[],error:null})).tree),/No check recorded yet/)
   for(const response of [{data:null,error:{message:'denied'}},{data:[{...run,finished_at:null}],error:null}]) {
