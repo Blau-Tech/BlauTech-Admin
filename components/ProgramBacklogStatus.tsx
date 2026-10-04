@@ -11,6 +11,7 @@ const states = [
   ['FAILED', 'Stopped after failures'],
   ['REJECTED', 'Rejected by ingestion'],
   ['PAUSED', 'Paused — source outside current scope'],
+  ['MANUAL_REVIEW', 'Needs a human check'],
 ] as const
 
 export default function ProgramBacklogStatus() {
@@ -96,11 +97,11 @@ export default function ProgramBacklogStatus() {
     {sources && <div className="mt-5 overflow-x-auto">
       <table className="w-full text-left text-sm">
         <caption className="mb-2 text-left font-medium">By primary discovery source</caption>
-        <thead><tr><th className="p-2">Source</th><th className="p-2">Waiting</th><th className="p-2">Retry</th><th className="p-2">Sent to review</th><th className="p-2">Stopped</th><th className="p-2">Paused</th></tr></thead>
+        <thead><tr><th className="p-2">Source</th><th className="p-2">Waiting</th><th className="p-2">Retry</th><th className="p-2">Sent to review</th><th className="p-2">Stopped</th><th className="p-2">Paused</th><th className="p-2">Human check</th></tr></thead>
         <tbody>{Object.entries(sources).map(([url, totals]) => <tr key={url} className="border-t border-gray-200">
           <th className="p-2 break-all font-normal">{url}</th>
           <td className="p-2">{totals.QUEUED || 0}</td><td className="p-2">{totals.RETRY || 0}</td>
-          <td className="p-2">{totals.PENDING_REVIEW || 0}</td><td className="p-2">{(totals.FAILED || 0) + (totals.REJECTED || 0)}</td><td className="p-2">{totals.PAUSED || 0}</td>
+          <td className="p-2">{totals.PENDING_REVIEW || 0}</td><td className="p-2">{(totals.FAILED || 0) + (totals.REJECTED || 0)}</td><td className="p-2">{totals.PAUSED || 0}</td><td className="p-2">{totals.MANUAL_REVIEW || 0}</td>
         </tr>)}</tbody>
       </table>
     </div>}
