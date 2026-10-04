@@ -46,12 +46,12 @@ async function loadPanel(response, sourceResult = { data: [], error: null }, met
 
 test('queue counts use exact directory-only queries and preserve real zeros', async () => {
   const { values, queries } = await loadPanel(status => ({ count: status === 'QUEUED' ? 172 : 0, error: null }))
-  assert.deepEqual(values[0], [172,0,0,0,0,0])
+  assert.deepEqual(values[0], [172,0,0,0,0,0,0])
   assert.equal(Object.keys(values[1]).length, 0)
   assert.equal(values[2], '')
   assert.equal(values[3], false)
-  assert.equal(queries.length, 8)
-  for (const query of queries.slice(0,6)) {
+  assert.equal(queries.length, 9)
+  for (const query of queries.slice(0,7)) {
     assert.equal(query.table, 'program_discoveries')
     assert.deepEqual(query.options, { count: 'exact', head: true })
     assert.deepEqual(query.filters[0], ['discovery_kind', 'DIRECTORY'])
@@ -89,11 +89,11 @@ test('failed source statistics leave counts unavailable', async () => {
 test('capacity uses queue availability age and bounded completion count', async () => {
   const {values,queries}=await loadPanel(()=>({count:181,error:null}),undefined,{completed:{count:7,error:null}})
   assert.deepEqual(values[4],{oldest:'2026-10-01T10:00:00Z',completed:7})
-  assert.deepEqual(queries[6].order,['available_at',{ascending:true}])
-  assert.equal(queries[6].limit,1)
-  assert.deepEqual(queries[6].filters,[['discovery_kind','DIRECTORY'],['status','QUEUED']])
-  assert.equal(queries[7].filters[1][0],'completed_at')
-  assert(Number.isFinite(Date.parse(queries[7].filters[1][1])))
+  assert.deepEqual(queries[7].order,['available_at',{ascending:true}])
+  assert.equal(queries[7].limit,1)
+  assert.deepEqual(queries[7].filters,[['discovery_kind','DIRECTORY'],['status','QUEUED']])
+  assert.equal(queries[8].filters[1][0],'completed_at')
+  assert(Number.isFinite(Date.parse(queries[8].filters[1][1])))
 })
 
 test('failed or malformed capacity never displays a false zero', async () => {
@@ -109,3 +109,11 @@ test('failed or malformed capacity never displays a false zero', async () => {
     assert.ok(values[2])
   }
 })
+
+test('paused candidates are visible separately from waiting and retries', async () => {
+  const { values } = await loadPanel(status => ({ count: status === 'PAUSED' ? 171 : 0, error: null }), { data: [
+    { source_url: 'https://old-source.example', status: 'PAUSED', candidates: 171 },
+  ], error: null });
+  assert.deepEqual(values[0], [0,0,0,0,0,0,171]);
+  assert.equal(values[1]['https://old-source.example'].PAUSED, 171);
+});
