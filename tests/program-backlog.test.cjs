@@ -7,7 +7,7 @@ async function loadPanel(response, sourceResult = { data: [], error: null }, met
   const values = [], queries = []
   let effect, index = 0
   const react = {
-    useState(initial) { const i = index++; values[i] = initial; return [initial, value => { values[i] = value }] },
+    useState(initial) { const i = index++; if (!(i in values)) values[i] = initial; return [values[i], value => { values[i] = value }] },
     useEffect(callback) { effect = callback },
   }
   const supabase = { rpc: async name => { assert.equal(name, 'program_directory_source_counts'); return sourceResult }, from(table) {
@@ -35,13 +35,14 @@ async function loadPanel(response, sourceResult = { data: [], error: null }, met
   const mod = { exports: {} }
   new Function('module','exports','require',compiled)(mod, mod.exports, name => {
     if (name === 'react') return react
-    if (name === 'react/jsx-runtime') return { jsx: () => null, jsxs: () => null }
+    if (name === 'react/jsx-runtime') return { jsx: (type,props) => ({type,props}), jsxs: (type,props) => ({type,props}) }
     if (name === '@/lib/supabase') return { supabase }
     throw Error(name)
   })
   mod.exports.default(); effect()
   await new Promise(resolve => setImmediate(resolve))
-  return { values, queries }
+  const render = () => { index = 0; return mod.exports.default() }
+  return { values, queries, render }
 }
 
 test('queue counts use exact directory-only queries and preserve real zeros', async () => {
@@ -117,3 +118,43 @@ test('paused candidates are visible separately from waiting and retries', async 
   assert.deepEqual(values[0], [0,0,0,0,0,0,171,0]);
   assert.equal(values[1]['https://old-source.example'].PAUSED, 171);
 });
+
+function textOf(node) {
+  if (Array.isArray(node)) return node.map(textOf).join(' ')
+  if (node && typeof node === 'object') return textOf(node.props?.children)
+  return typeof node === 'string' || typeof node === 'number' ? String(node) : ''
+}
+function rowsOf(node) {
+  if (Array.isArray(node)) return node.flatMap(rowsOf)
+  if (!node || typeof node !== 'object') return []
+  return [...(node.type === 'tr' ? [textOf(node).replace(/\s+/g,' ')] : []), ...rowsOf(node.props?.children)]
+}
+test('source health separates evidence holds, technical failures and correct exclusions', async () => {
+  const {render, values} = await loadPanel(() => ({count:0,error:null}), {data:[
+    {source_url:'https://unclear.example',status:'MANUAL_REVIEW',candidates:3},
+    {source_url:'https://unclear.example',status:'PENDING_REVIEW',candidates:2},
+    {source_url:'https://broken.example',status:'RETRY',candidates:1},
+    {source_url:'https://broken.example',status:'FAILED',candidates:4},
+    {source_url:'https://excluded.example',status:'REJECTED',candidates:7},
+    {source_url:'https://excluded.example',status:'PAUSED',candidates:170},
+    {source_url:'https://new.example',status:'QUEUED',candidates:6},
+  ],error:null})
+  const rows=rowsOf(render())
+  const unclear=rows.find(row=>row.includes('https://unclear.example'))
+  assert.match(unclear,/Check unclear evidence/);assert.doesNotMatch(unclear,/Inspect reading failures/)
+  assert.match(unclear,/2 sent to private review/)
+  const broken=rows.find(row=>row.includes('https://broken.example'))
+  assert.match(broken,/Inspect reading failures/);assert.match(broken,/1 waiting to retry/);assert.match(broken,/4 exhausted reads/)
+  const excluded=rows.find(row=>row.includes('https://excluded.example'))
+  assert.doesNotMatch(excluded,/Inspect reading failures|Check unclear evidence/)
+  assert.match(excluded,/7 rejected/);assert.match(excluded,/170 paused/)
+  assert.match(rows.find(row=>row.includes('https://new.example')),/Awaiting checks/)
+  assert.ok(Number.isFinite(Date.parse(values[5])))
+  assert.match(textOf(render()),/not source uptime or a success rate/)
+})
+test('malformed source counts never produce a healthy zero', async () => {
+  for (const candidates of [null,'',false,'-1','not-a-number']) {
+    const {values}=await loadPanel(()=>({count:0,error:null}),{data:[{source_url:'https://bad.example',status:'FAILED',candidates}],error:null})
+    assert.equal(values[1],null);assert.equal(values[5],null);assert.match(values[2],/Invalid source count/)
+  }
+})
