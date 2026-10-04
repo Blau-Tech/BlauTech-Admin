@@ -24,7 +24,7 @@ test('individual programs are drafts with explicit category and approval actions
   for (const category of ['FELLOWSHIP', 'STUDENT_PROGRAM', 'CAREER_DEVELOPMENT', 'RESIDENCY', 'FOUNDER_PROGRAM', 'COMMUNITY']) {
     assert.ok(form.includes(`option value="${category}"`), category)
   }
-  assert.match(form, /opportunity and its applicant geography/)
+  assert.match(form, /opportunity for an individual tech builder and its applicant geography/)
   assert.match(form, /typeof data.no_company_required === 'boolean'/)
   assert.match(form, /data.no_company_required === 'false' \? false : null/)
   assert.doesNotMatch(form, /excluded type \(startup program/)
