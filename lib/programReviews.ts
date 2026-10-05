@@ -22,6 +22,12 @@ export type ReviewDecision = {
   newApplicationRound?: boolean
 }
 
+export function reviewOutsideFocus(listing: Record<string, any>): boolean {
+  return ['ACCELERATOR', 'INCUBATOR', 'STARTUP_FUNDING'].includes(listing.program_subtype)
+    || listing.individual_eligible === false || listing.no_company_required === false
+    || listing.excluded_program === true
+}
+
 export function reviewTimingLabel(listing: Record<string, any>, now = new Date()): string | null {
   const today = now.toISOString().slice(0, 10)
   const elapsed = (value: unknown) => typeof value === 'string'

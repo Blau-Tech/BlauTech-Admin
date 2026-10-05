@@ -13,7 +13,7 @@ import OpportunityForm from '@/components/OpportunityForm'
 import GlassCard from '@/components/ui/GlassCard'
 import Badge from '@/components/ui/Badge'
 import { opportunitiesApi } from '@/lib/api'
-import { programReviewsApi, reviewTimingLabel, type ProgramReview, type ReviewDecision } from '@/lib/programReviews'
+import { programReviewsApi, reviewTimingLabel, reviewOutsideFocus, type ProgramReview, type ReviewDecision } from '@/lib/programReviews'
 import { useAuth } from '@/lib/auth'
 import { format } from 'date-fns'
 
@@ -62,6 +62,9 @@ export default function OpportunitiesPage() {
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null)
   const [editingReview, setEditingReview] = useState<ProgramReview | null>(null)
   const [reviews, setReviews] = useState<ProgramReview[]>([])
+  const [showOutsideFocus, setShowOutsideFocus] = useState(false)
+  const outsideFocusCount = reviews.filter(review => reviewOutsideFocus(review.proposed_listing)).length
+  const visibleReviews = showOutsideFocus ? reviews : reviews.filter(review => !reviewOutsideFocus(review.proposed_listing))
   const [reviewStatus, setReviewStatus] = useState<ProgramReview['status']>('PENDING')
 
   useEffect(() => {
@@ -209,9 +212,13 @@ export default function OpportunitiesPage() {
               ))}
               <button type="button" onClick={loadOpportunities} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">Refresh reviews</button>
             </div>
-            {!reviews.length && <p className="text-sm text-gray-500">No {reviewStatus.toLowerCase()} reviews.</p>}
+            {outsideFocusCount > 0 && <label className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+              <input type="checkbox" checked={showOutsideFocus} onChange={event => setShowOutsideFocus(event.target.checked)} />
+              Show {outsideFocusCount} outside-focus reviews
+            </label>}
+            {!visibleReviews.length && <p className="text-sm text-gray-500">No {reviewStatus.toLowerCase()} reviews.</p>}
             <ul className="divide-y divide-gray-200">
-              {reviews.map(review => { const timing = reviewTimingLabel(review.proposed_listing); return (
+              {visibleReviews.map(review => { const timing = reviewTimingLabel(review.proposed_listing); return (
                 <li key={review.id} className="flex flex-wrap items-start justify-between gap-3 py-4">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-medium">{review.proposed_listing.title || 'Untitled program'}</h3>

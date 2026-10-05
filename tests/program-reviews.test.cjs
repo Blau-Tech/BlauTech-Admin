@@ -123,3 +123,16 @@ test('opening and saving a reader draft preserves unknown, yes and no eligibilit
     assert.equal(saved.is_published, false)
   }
 })
+
+
+test('review focus sets aside explicit startup-only or excluded offers, keeping unknown eligibility visible', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../lib/programReviews.ts'), 'utf8')
+  const compiled = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText
+  const mod = {exports:{}}
+  new Function('module','exports','require',compiled)(mod,mod.exports,()=>({supabase:{}}))
+  const outside = mod.exports.reviewOutsideFocus
+  for (const program_subtype of ['ACCELERATOR','INCUBATOR','STARTUP_FUNDING']) assert.equal(outside({program_subtype}),true)
+  for (const field of ['individual_eligible','no_company_required']) assert.equal(outside({[field]:false}),true)
+  assert.equal(outside({excluded_program:true}),true)
+  for (const program_subtype of ['FELLOWSHIP','RESIDENCY','FOUNDER_PROGRAM','STUDENT_PROGRAM',null]) assert.equal(outside({program_subtype,individual_eligible:null,no_company_required:null}),false)
+})
