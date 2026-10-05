@@ -187,7 +187,7 @@ test('requires test_mode to be a real boolean', () => {
 })
 
 test('directory collection is restricted to full admins and fixed empty requests', () => {
-  const paths=['program-directory-alpine-hacker-houses','program-directory-startup-question','program-directory-hackermap','program-directory-nowwhere-startup-houses']
+  const paths=['program-directory-aisafety-training','program-directory-devgrants-fellowships','program-directory-third-door-programs','program-directory-ai-fellowship-hub','program-directory-alpine-hacker-houses','program-directory-startup-question','program-directory-hackermap','program-directory-nowwhere-startup-houses']
   const admin=getAccessClaims({app_metadata:{role:'admin'}})
   const cityLead=getAccessClaims({app_metadata:{role:'city_lead',city:'BERLIN'}})
   for(const path of paths) {
