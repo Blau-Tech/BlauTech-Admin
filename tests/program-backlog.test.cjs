@@ -16,11 +16,12 @@ async function loadPanel(response, sourceResult = { data: [], error: null }, met
       select(field, options) { query.field = field; query.options = options; return chain },
       eq(key, value) { query.filters.push([key, value]); return chain },
       gte(key, value) { query.filters.push([key, value]); return chain },
+      lte(key, value) { query.filters.push([key, value]); return chain },
       order(key, options) { query.order = [key, options]; return chain },
       limit(value) { query.limit = value; return chain },
       then(resolve, reject) {
         const status = query.filters.find(([key]) => key === 'status')?.[1]
-        const result = query.field === 'available_at'
+        const result = query.field.startsWith('selected_official_url,') ? metrics.deadlines || { data: [], error: null } : query.field === 'available_at'
           ? metrics.oldest || { data: response('QUEUED').count ? [{ available_at: '2026-10-01T10:00:00Z' }] : [], error: null }
           : query.filters.some(([key]) => key === 'completed_at') ? metrics.completed || { count: 0, error: null } : response(status)
         return Promise.resolve(result).then(resolve, reject)
@@ -51,7 +52,7 @@ test('queue counts use exact directory-only queries and preserve real zeros', as
   assert.equal(Object.keys(values[1]).length, 0)
   assert.equal(values[2], '')
   assert.equal(values[3], false)
-  assert.equal(queries.length, 10)
+  assert.equal(queries.length, 11)
   for (const query of queries.slice(0,8)) {
     assert.equal(query.table, 'program_discoveries')
     assert.deepEqual(query.options, { count: 'exact', head: true })
@@ -170,4 +171,21 @@ test('malformed source counts never produce a healthy zero', async () => {
     const {values}=await loadPanel(()=>({count:0,error:null}),{data:[{source_url:'https://bad.example',status:'FAILED',candidates}],error:null})
     assert.equal(values[1],null);assert.equal(values[5],null);assert.match(values[2],/Invalid source count/)
   }
+})
+
+
+test('upcoming hints are a bounded directory-only list and never confirmed dates', async () => {
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+  const {render,queries}=await loadPanel(()=>({count:1,error:null}),undefined,{deadlines:{data:[{selected_official_url:'https://program.example/',name:'Builder Fellowship',deadline:today}],error:null}})
+  const query=queries[10]
+  assert.equal(query.limit,3)
+  assert.deepEqual(query.filters.slice(0,2),[['discovery_kind','DIRECTORY'],['status','QUEUED']])
+  assert(query.filters.some(([key])=>key==='available_at'))
+  const text=textOf(render())
+  assert.match(text,/Coming up first/)
+  assert.match(text,/Builder Fellowship/)
+  assert.match(text,/still need verification/)
+  const malformed=await loadPanel(()=>({count:1,error:null}),undefined,{deadlines:{data:[{selected_official_url:'javascript:alert(1)',deadline:today}],error:null}})
+  assert.equal(malformed.values[0],null)
+  assert.match(malformed.values[2],/Invalid program link/)
 })
