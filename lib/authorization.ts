@@ -17,6 +17,8 @@ const BERLIN_LINKEDIN_WORKFLOW_PATH = 'blau-network-linkedin-draft-berlin'
 
 const DIRECTORY_WORKFLOW_PATHS = [
   'program-directory-alpine-hacker-houses', 'program-directory-startup-question',
+  'program-directory-aisafety-training', 'program-directory-devgrants-fellowships',
+  'program-directory-third-door-programs', 'program-directory-ai-fellowship-hub',
   'program-directory-hackermap', 'program-directory-nowwhere-startup-houses',
 ] as const
 
