@@ -214,7 +214,7 @@ export default function OpportunitiesPage() {
             </div>
             {outsideFocusCount > 0 && <label className="mb-4 flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={showOutsideFocus} onChange={event => setShowOutsideFocus(event.target.checked)} />
-              Show {outsideFocusCount} outside-focus reviews
+              Show {outsideFocusCount} reviews outside our focus
             </label>}
             {!visibleReviews.length && <p className="text-sm text-gray-500">No {reviewStatus.toLowerCase()} reviews.</p>}
             <ul className="divide-y divide-gray-200">
