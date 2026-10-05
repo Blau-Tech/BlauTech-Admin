@@ -36,6 +36,7 @@ export default function ProgramBacklogStatus() {
   const [loading, setLoading] = useState(false)
   const [capacity, setCapacity] = useState<{ oldest: string | null; completed: number } | null>(null)
   const [refreshedAt, setRefreshedAt] = useState<string | null>(null)
+  const [upcoming, setUpcoming] = useState<{ url: string; name: string; deadline: string }[] | null>(null)
 
   async function refresh() {
     setLoading(true)
@@ -56,18 +57,36 @@ export default function ProgramBacklogStatus() {
         grouped[row.source_url][row.status] = Number(row.candidates)
       }
       const since = new Date(Date.now() - 7 * 86400000).toISOString()
-      const [oldest, completed] = await Promise.all([
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+      const until = new Date(Date.parse(today + 'T00:00:00Z') + 30 * 86400000).toISOString().slice(0, 10)
+      const [oldest, completed, deadlines] = await Promise.all([
         supabase.from('program_discoveries').select('available_at')
           .eq('discovery_kind', 'DIRECTORY').eq('status', 'QUEUED')
           .order('available_at', { ascending: true }).limit(1),
         supabase.from('program_discoveries').select('id', { count: 'exact', head: true })
           .eq('discovery_kind', 'DIRECTORY').gte('completed_at', since),
+        supabase.from('program_discoveries')
+          .select('selected_official_url,name:reader_context->directory_lead->>house_name,deadline:reader_context->directory_lead->>application_deadline_hint')
+          .eq('discovery_kind', 'DIRECTORY').eq('status', 'QUEUED').lte('available_at', new Date().toISOString())
+          .gte('reader_context->directory_lead->>application_deadline_hint', today)
+          .lte('reader_context->directory_lead->>application_deadline_hint', until)
+          .order('reader_context->directory_lead->>application_deadline_hint', { ascending: true }).order('available_at', { ascending: true }).order('id', { ascending: true }).limit(3),
       ])
       if (oldest.error || completed.error) throw new Error(oldest.error?.message || completed.error?.message)
       if (!Array.isArray(oldest.data) || oldest.data.length > 1
         || (oldest.data.length === 1 && (typeof oldest.data[0].available_at !== 'string' || !Number.isFinite(Date.parse(oldest.data[0].available_at))))
         || completed.count === null || !Number.isSafeInteger(completed.count) || completed.count < 0) throw new Error('Queue capacity unavailable')
       if (results[0].count! > 0 && oldest.data.length === 0) throw new Error('Queue changed while loading; refresh to try again')
+      if (deadlines.error || !Array.isArray(deadlines.data) || deadlines.data.length > 3) throw new Error('Upcoming deadlines unavailable')
+      const upcomingRows = deadlines.data.map(row => {
+        if (typeof row.deadline !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.deadline)
+          || !Number.isFinite(Date.parse(row.deadline)) || new Date(row.deadline).toISOString().slice(0, 10) !== row.deadline
+          || row.deadline < today || row.deadline > until || typeof row.selected_official_url !== 'string') throw new Error('Invalid deadline hint')
+        const url = new URL(row.selected_official_url)
+        if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Invalid program link')
+        return { url: url.href, name: typeof row.name === 'string' && row.name.trim() ? row.name : url.hostname, deadline: row.deadline }
+      })
+      setUpcoming(upcomingRows)
       setCapacity({ oldest: oldest.data[0]?.available_at || null, completed: completed.count })
       setSources(grouped)
       setCounts(results.map(result => result.count!))
@@ -76,6 +95,7 @@ export default function ProgramBacklogStatus() {
       setCounts(null)
       setSources(null)
       setCapacity(null)
+      setUpcoming(null)
       setRefreshedAt(null)
       setError(err instanceof Error ? err.message : 'Unable to load queue status')
     } finally {
@@ -112,6 +132,14 @@ export default function ProgramBacklogStatus() {
       </details>
     </>}
     {capacity && counts && <div className="mt-5 rounded-lg bg-gray-50 p-4">
+      {upcoming && upcoming.length > 0 && <div className="mb-4 border-b border-gray-200 pb-4">
+        <h3 className="font-medium text-gray-900">Coming up first</h3>
+        <p className="mt-1 text-xs text-gray-500">Reported deadlines · still need verification. Retries share the queue.</p>
+        <ul className="mt-2 space-y-2">{upcoming.map(row => <li key={row.url} className="flex items-start justify-between gap-4 text-sm">
+          <a href={row.url} target="_blank" rel="noopener noreferrer" className="text-blue-800 underline">{row.name}</a>
+          <time dateTime={row.deadline} className="shrink-0 font-medium text-amber-800">{new Date(row.deadline + 'T12:00:00Z').toLocaleDateString('en-GB', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'short' })}</time>
+        </li>)}</ul>
+      </div>}
       <h3 className="font-medium text-gray-900">Checking speed</h3>
       <dl className="mt-3 grid gap-4 sm:grid-cols-3">
         <div><dt className="text-sm text-gray-600">Daily limit</dt><dd className="font-semibold">6 links per day</dd></div>
